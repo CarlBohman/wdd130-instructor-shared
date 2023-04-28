@@ -1,0 +1,1 @@
+javascript:void(document.location='https://' + (document.location.pathname.toString().match(/^\/?([^\/]+)\//)[1]) + '.github.io/' + (document.location.pathname.toString().match(/^\/?[^\/]+\/([^\/]+)/)[1]) + (document.location.pathname.toString().match(/\/blob\/\w+\//) ? document.location.pathname.toString().match(/\/blob\/\w+(\/.*)/)[1] : ''))

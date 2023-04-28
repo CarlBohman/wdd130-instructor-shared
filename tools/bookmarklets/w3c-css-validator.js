@@ -1,0 +1,1 @@
+javascript:void(document.location='http://jigsaw.w3.org/css-validator/validator?uri=' + encodeURI(document.location))

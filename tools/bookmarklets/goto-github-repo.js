@@ -1,0 +1,1 @@
+javascript:void(document.location='https://github.com/' + (document.location.hostname.toString().match(/^(.*?)\./)[1]) + '/' + (document.location.pathname.toString().match(/^\/?([^\/]+)/)[1]))

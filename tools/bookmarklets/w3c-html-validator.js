@@ -1,0 +1,1 @@
+javascript:void(document.location='http://validator.w3.org/check?uri=' + encodeURI(document.location))
