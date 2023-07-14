@@ -1,4 +1,11 @@
 javascript:
+function addJquery() {
+    if (typeof jQuery == 'undefined') {
+        var script_jQuery = document.createElement('script');
+        script_jQuery.src = 'https://code.jquery.com/jquery-latest.min.js';
+        document.body.appendChild(script_jQuery);
+    }
+}
 function componentFromStr(numStr, percent) {
     var num = Math.max(0, parseInt(numStr, 10));
     return percent ? Math.floor(255 * Math.min(100, num) / 100) : Math.min(255, num);
@@ -181,6 +188,10 @@ function displayFontsAndColors() {
     a.target = "_blank";
     a.innerHTML = "Site Plan";
     elinks.add(a);
+    a = document.createElement("a");
+    a.href = "javascript:$('header').hide();";
+    a.innerHTML = "Hide &lt;header&gt;";
+    elinks.add(a);
     addList(cf, "background-color", bg, 'color');
     addList(cf, "color", fg, 'color');
     addList(cf, "font-family", font, 'font');
@@ -188,4 +199,5 @@ function displayFontsAndColors() {
     addList(cf, "External Links", elinks, 'element');
     document.body.scrollTop = document.documentElement.scrollTop = 0;
 }
+addJquery();
 displayFontsAndColors();
