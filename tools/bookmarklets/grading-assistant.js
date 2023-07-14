@@ -89,6 +89,7 @@ function displayFontsAndColors() {
         div#colors_and_fonts div ul li span,
         div#colors_and_fonts div ul li a
         {
+            all: revert;
             width: 100%;
             padding: 0em;
             margin: 0em;
