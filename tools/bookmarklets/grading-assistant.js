@@ -110,6 +110,7 @@ function displayFontsAndColors() {
             display: grid;
             grid-template-columns: 1fr 1fr 1fr;
             width: auto;
+            grid-column: 1/-1;
         }
         div#colors_and_fonts div
         {   
@@ -190,8 +191,8 @@ function displayFontsAndColors() {
     a.innerHTML = "Site Plan";
     elinks.add(a);
     a = document.createElement("a");
-    a.href = "javascript:$('header').hide();";
-    a.innerHTML = "Hide &lt;header&gt;";
+    a.href = "javascript:$('header').toggle();";
+    a.innerHTML = "Toggle &lt;header&gt;";
     elinks.add(a);
     addList(cf, "background-color", bg, 'color');
     addList(cf, "color", fg, 'color');
