@@ -1,0 +1,1 @@
+javascript:void(document.location=document.location.toString().replace("/assignments/", "/gradebook/speed_grader?assignment_id=").replace("/submissions/", "&student_id="))
