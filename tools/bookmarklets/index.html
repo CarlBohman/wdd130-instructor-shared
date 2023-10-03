@@ -5,6 +5,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Bookmarklet help</title>
+    <style>
+        table,
+        th,
+        td {
+            border: 1px black solid;
+        }
+    </style>
 </head>
 
 <body>
@@ -37,6 +44,35 @@
             <td><a href="goto-github-repo.js">goto-github-repo.js</a></td>
             <td>Viewing a web page hosted by GitHub Pages.</td>
             <td>Redirects user to the repository that is configured with GitHub Pages.</td>
+        </tr>
+        <tr>
+            <td><a href="goto-speed-grader.js">goto-speed-grader.js</a></td>
+            <td>Viewing a "Submission Details" page on Canvas. This is commonly reached by clicking on a link in an
+                email notification from Canvas (that might be something like "Click here to review the submission").
+            </td>
+            <td>Redirects user to the Speed Grader page for that specific assignment for that student.</td>
+        </tr>
+        <tr>
+            <td><a href="grading-assistant.js">grading-assistant.js</a></td>
+            <td>Viewing any web page (especially one of the project pages for WDD 130).</td>
+            <td>
+                <p>Creates a block on information at the top of the page. The information includes colors, fonts, links,
+                    etc.</p>
+                <p>NOTE:<br>While this bookmarklet tries to ensure that it always displays consistently, some CSS, HTML,
+                    JavaScript, etc. that is part of a page can cause it to have some issues. In particular, floating
+                    headers can overlap the block. To work around these kinds of issues, set the header (or other piece
+                    of HTML) to be hidden ("visibility: none;") using the inpsect tool or do other tweaks as needed.</p>
+            </td>
+        </tr>
+        <tr>
+            <td><a href="w3c-css-validator.js">w3c-css-validator.js</a></td>
+            <td>Viewing any web page.</td>
+            <td>Redirects user to the CSS validator for that page.</td>
+        </tr>
+        <tr>
+            <td><a href="w3c-html-validator.js">w3c-html-validator.js</a></td>
+            <td>Viewing any web page.</td>
+            <td>Redirects user to the HTML validator for that page.</td>
         </tr>
     </table>
 </body>
