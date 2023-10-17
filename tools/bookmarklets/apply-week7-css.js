@@ -102,7 +102,7 @@ footer {
     font-size: 1.2rem;
 }
 `;
-var head = document.head;
-var style = document.createElement('style');
-head.appendChild(style);
-style.appendChild(document.createTextNode(css));
+let head = document.head;
+let style = document.createElement('style');
+head.append(style);
+style.append(css);
