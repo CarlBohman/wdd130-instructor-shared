@@ -27,8 +27,9 @@ function rgbToHex(rgb) {
 }
 function getStyle(oElm, strCssRule) {
     var strValue = "";
-    if (document.defaultView && document.defaultView.getComputedStyle) {
-        strValue = document.defaultView.getComputedStyle(oElm, "").getPropertyValue(strCssRule);
+    var iframe = document.getElementById("originalFrame");
+    if (iframe.contentWindow && iframe.contentWindow.getComputedStyle) {
+        strValue = iframe.contentWindow.getComputedStyle(oElm).getPropertyValue(strCssRule);
     } else if (oElm.currentStyle) {
         strCssRule = strCssRule.replace(/\-(\w)/g, function (strMatch, p1) {
             return p1.toUpperCase();
@@ -74,13 +75,37 @@ function addList(node, name, data, type) {
         ul.appendChild(li);
     }
 }
-function displayFontsAndColors() {
+function createIframe() {
     var cf = document.getElementById("colors_and_fonts");
     if (cf == null) {
+        var iframe = document.createElement("iframe");
+        iframe.id = 'originalFrame';
+        var content = document.documentElement.innerHTML;
+        document.body.innerHTML = iframe.outerHTML;
+        iframe = document.getElementById("originalFrame");
+        var doc = iframe.contentWindow.document;
+        doc.open();
+        doc.write(content);
+        doc.close();
+        for (const element of document.head.getElementsByTagName('*'))
+        {
+            if (element.tagName.toLowerCase() != 'title')
+                element.parentNode.removeChild(element);
+        }
+        for (const element of iframe.contentWindow.document.body.getElementsByTagName('a'))
+        {
+            console.log(element);
+            if (element.getAttribute('target') == null) element.setAttribute('target', '_top');
+        }
+        iframe.contentWindow.document.body.focus();
         cf = document.createElement("div");
         cf.id = "colors_and_fonts";
         document.body.insertBefore(cf, document.body.firstChild);
         var css = `
+        body
+        {
+            margin: 0px;
+        }
         div#colors_and_fonts,
         div#colors_and_fonts div,
         div#colors_and_fonts div h3,
@@ -117,7 +142,7 @@ function displayFontsAndColors() {
         }
         div#colors_and_fonts div h3
         {
-            padding: 0.5em;
+            padding: 0.1em;
             width: auto;
             font-size: large;
             font-weight: bold;
@@ -130,7 +155,7 @@ function displayFontsAndColors() {
         }
         div#colors_and_fonts div ul li
         {
-            padding: 0.5em;
+            padding: 0.1em;
             width: auto;
             float: none;
         }
@@ -155,18 +180,28 @@ function displayFontsAndColors() {
             color: red;
             text-decoration: underline;
         }
+        iframe#originalFrame
+        {
+            width: 100%;
+            height: calc(100vh - 50px);
+            resize: vertical;
+        }
         `;
         var styles = document.createElement("style");
         styles.innerHTML = css;
         document.head.appendChild(styles);
     }
+}
+function displayFontsAndColors() {
+    var cf = document.getElementById("colors_and_fonts");
+    var iframe = document.getElementById("originalFrame");
     cf.innerHTML = "";
     var bg = new Set();
     var fg = new Set();
     var font = new Set();
     var links = new Set();
     var elinks = new Set();
-    var elements = document.getElementsByTagName("*");
+    var elements = iframe.contentWindow.document.getElementsByTagName("*");
     for (const cur of elements) {
         bg.add(getStyle(cur, "background-color"));
         fg.add(getStyle(cur, "color"));
@@ -191,7 +226,7 @@ function displayFontsAndColors() {
     a.innerHTML = "Site Plan";
     elinks.add(a);
     a = document.createElement("a");
-    a.href = "javascript:$('header').toggle();";
+    a.href = "javascript:iframe = $('#originalFrame'); $('header', iframe.contents()).toggle();";
     a.innerHTML = "Toggle &lt;header&gt;";
     elinks.add(a);
     addList(cf, "background-color", bg, 'color');
@@ -202,4 +237,7 @@ function displayFontsAndColors() {
     document.body.scrollTop = document.documentElement.scrollTop = 0;
 }
 addJquery();
-displayFontsAndColors();
+createIframe();
+setTimeout(() => {
+    displayFontsAndColors();
+}, 100);
