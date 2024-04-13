@@ -75,9 +75,23 @@ function addList(node, name, data, type) {
         ul.appendChild(li);
     }
 }
+function getFontImportStatements() {
+    const fontImports = [];
+    const styleSheets = Array.from(document.styleSheets);
+
+    for (const styleSheet of styleSheets) {
+        const cssRules = styleSheet.cssRules;
+        for (rule of cssRules) {
+            if ((rule instanceof CSSImportRule) && (rule.href.match(/\/fonts\.googleapis\.com\//)))
+                fontImports.push(rule);
+        }
+    }
+    return fontImports;
+}
 function createIframe() {
     var cf = document.getElementById("colors_and_fonts");
     if (cf == null) {
+        var fontImports = getFontImportStatements();
         var iframe = document.createElement("iframe");
         iframe.id = 'originalFrame';
         var content = document.documentElement.innerHTML;
@@ -94,7 +108,6 @@ function createIframe() {
         }
         for (const element of iframe.contentWindow.document.body.getElementsByTagName('a'))
         {
-            console.log(element);
             if (element.getAttribute('target') == null) element.setAttribute('target', '_top');
         }
         iframe.contentWindow.document.body.focus();
@@ -190,6 +203,9 @@ function createIframe() {
         var styles = document.createElement("style");
         styles.innerHTML = css;
         document.head.appendChild(styles);
+        for (const fontImport of fontImports) {
+            document.styleSheets[0].insertRule(fontImport.cssText);
+        }
     }
 }
 function displayFontsAndColors() {
