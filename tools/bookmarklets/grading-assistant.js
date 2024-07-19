@@ -94,10 +94,11 @@ function getFontImportStatements() {
     return fontImports;
 }
 function createIframe() {
+    var iframe = null;
     var cf = document.getElementById("colors_and_fonts");
     if (cf == null) {
         var fontImports = getFontImportStatements();
-        var iframe = document.createElement("iframe");
+        iframe = document.createElement("iframe");
         iframe.id = 'originalFrame';
         var content = document.documentElement.innerHTML;
         document.body.innerHTML = iframe.outerHTML;
@@ -212,7 +213,10 @@ function createIframe() {
         for (const fontImport of fontImports) {
             styleSheets[styleSheets.length - 1].insertRule(fontImport.cssText);
         }
+    } else {
+        iframe = document.getElementById("originalFrame");
     }
+    return iframe;
 }
 function displayFontsAndColors() {
     var cf = document.getElementById("colors_and_fonts");
@@ -263,7 +267,9 @@ function displayFontsAndColors() {
     document.body.scrollTop = document.documentElement.scrollTop = 0;
 }
 addJquery();
-createIframe();
-setTimeout(() => {
-    displayFontsAndColors();
-}, 100);
+var iframe = createIframe();
+if (iframe.contentWindow.document.readyState === 'complete') {
+    displayFontsAndColors()
+} else {
+    iframe.contentWindow.addEventListener('load', displayFontsAndColors)
+}
