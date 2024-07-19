@@ -80,6 +80,11 @@ function getFontImportStatements() {
     const styleSheets = Array.from(document.styleSheets);
 
     for (const styleSheet of styleSheets) {
+        try {
+            styleSheet.cssRules;
+        } catch (e) {
+            continue;
+        }
         const cssRules = styleSheet.cssRules;
         for (rule of cssRules) {
             if ((rule instanceof CSSImportRule) && (rule.href.match(/\/fonts\.googleapis\.com\//)))
@@ -203,8 +208,9 @@ function createIframe() {
         var styles = document.createElement("style");
         styles.innerHTML = css;
         document.head.appendChild(styles);
+        const styleSheets = document.styleSheets;
         for (const fontImport of fontImports) {
-            document.styleSheets[0].insertRule(fontImport.cssText);
+            styleSheets[styleSheets.length - 1].insertRule(fontImport.cssText);
         }
     }
 }
@@ -244,6 +250,10 @@ function displayFontsAndColors() {
     a = document.createElement("a");
     a.href = "javascript:iframe = $('#originalFrame'); $('header', iframe.contents()).toggle();";
     a.innerHTML = "Toggle &lt;header&gt;";
+    elinks.add(a);
+    a = document.createElement("a");
+    a.href = "javascript:iframe = $('#originalFrame'); $('img', iframe.contents()).css('max-width', '100%');";
+    a.innerHTML = "&lt;img&gt; max-width: 100%";
     elinks.add(a);
     addList(cf, "background-color", bg, 'color');
     addList(cf, "color", fg, 'color');
