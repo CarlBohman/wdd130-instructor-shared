@@ -51,9 +51,10 @@ function addList(node, name, data, type) {
     for (const d of data) {
         var li = document.createElement("li");
         if (type == "color") {
-            li.style.backgroundColor = d;
+            x = d.split(' ').slice(1).join(' ');
+            li.style.backgroundColor = x;
             x = document.createElement("span");
-            x.innerHTML = rgbToHex(d) + " " + d;
+            x.innerHTML = d;
         } else if (type == "font") {
             x = document.createElement("span");
             x.innerHTML = d;
@@ -155,6 +156,7 @@ function createIframe() {
             grid-template-columns: 1fr 1fr 1fr;
             width: auto;
             grid-column: 1/-1;
+            overflow-wrap: anywhere;
         }
         div#colors_and_fonts div
         {   
@@ -228,10 +230,13 @@ function displayFontsAndColors() {
     var links = new Set();
     var elinks = new Set();
     var elements = iframe.contentWindow.document.getElementsByTagName("*");
+    var s = null;
     for (const cur of elements) {
-        bg.add(getStyle(cur, "background-color"));
-        fg.add(getStyle(cur, "color"));
-        font.add(getStyle(cur, "font-family"));
+        s = getStyle(cur, "background-color");
+        bg.add(rgbToHex(s) + " " + s);
+        s = getStyle(cur, "color");
+        fg.add(rgbToHex(s) + " " + s);
+        font.add('"' + getStyle(cur, "font-family").replace(/^['"]+|['"]+$/g, '') + '"');
         if (cur.tagName.toLowerCase() == 'a') {
             links.add(cur.href);
         }
