@@ -121,6 +121,25 @@ function createIframe() {
         doc.open();
         doc.write(content);
         doc.close();
+        // wait (synchronously) for the iframe document to finish loading, with a timeout
+        var start = Date.now();
+        var timeout = 3000; // ms
+        try {
+            while (true) {
+            try {
+                if (iframe.contentWindow && iframe.contentWindow.document && iframe.contentWindow.document.readyState === 'complete') {
+                break;
+                }
+            } catch (e) {
+                // ignore cross-origin or transient access errors while loading
+            }
+            if (Date.now() - start > timeout) {
+                break;
+            }
+            }
+        } catch (e) {
+            // fail safe: if anything goes wrong, continue without blocking further
+        }
         for (const element of document.head.getElementsByTagName('*'))
         {
             if (element.tagName.toLowerCase() != 'title')
@@ -863,6 +882,10 @@ function runGradingTestRafting4(iframe, iframeDoc, results) {
             var hasUnderline = /\bunderline\b/i.test(td) ||
                 (bbStyle && bbStyle.toLowerCase() !== 'none' && bbStyle.toLowerCase() !== 'hidden' && !/^0(?:px)?/.test(bbWidth));
             if (hasUnderline) {
+                if (a.id === 'logo_link') {
+                    subResults.push('ℹ️ Skipping link with id="logo_link" from underline check (ignored).');
+                    continue;
+                }
                 var desc = a.tagName.toLowerCase();
                 if (a.id) desc += '#' + a.id;
                 if (a.className) desc += '.' + a.className.replace(/\s+/g, '.');
