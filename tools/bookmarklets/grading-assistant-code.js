@@ -121,25 +121,6 @@ function createIframe() {
         doc.open();
         doc.write(content);
         doc.close();
-        // wait (synchronously) for the iframe document to finish loading, with a timeout
-        var start = Date.now();
-        var timeout = 3000; // ms
-        try {
-            while (true) {
-            try {
-                if (iframe.contentWindow && iframe.contentWindow.document && iframe.contentWindow.document.readyState === 'complete') {
-                break;
-                }
-            } catch (e) {
-                // ignore cross-origin or transient access errors while loading
-            }
-            if (Date.now() - start > timeout) {
-                break;
-            }
-            }
-        } catch (e) {
-            // fail safe: if anything goes wrong, continue without blocking further
-        }
         for (const element of document.head.getElementsByTagName('*'))
         {
             if (element.tagName.toLowerCase() != 'title')
