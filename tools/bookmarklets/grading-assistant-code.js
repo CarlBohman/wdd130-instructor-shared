@@ -2,7 +2,7 @@ function addJquery() {
     if (typeof jQuery == 'undefined') {
         var script_jQuery = document.createElement('script');
         script_jQuery.src = 'https://code.jquery.com/jquery-latest.min.js';
-        document.body.appendChild(script_jQuery);
+        document.head.appendChild(script_jQuery);
     }
 }
 function escapeHtml(s) {
@@ -495,6 +495,324 @@ function runGradingTest(activity, number) {
             } else {
                 results.push('❌ Missing element with id="background"');
             }
+
+            // check background colors for body, header, nav:hover, buttons, divs, and footer
+            (function() {
+                function hasVisibleBackground(val) {
+                    if (!val) return false;
+                    val = val.trim().toLowerCase();
+                    if (val === 'transparent' || val === 'inherit' || val === 'initial' || val === 'none') return false;
+                    // rgba(..., 0) -> fully transparent
+                    if (/^rgba\(\s*\d+,\s*\d+,\s*\d+,\s*0(?:\.0+)?\s*\)$/.test(val)) return false;
+                    return true;
+                }
+
+                // body
+                var bodyBg = getStyle(iframeDoc.body, 'background-color');
+                if (hasVisibleBackground(bodyBg)) {
+                    results.push('✅ body background-color set: ' + bodyBg);
+                } else {
+                    results.push('❌ body is missing a visible background-color (computed: ' + (bodyBg || 'none') + ')');
+                }
+
+                // header
+                var headers = iframeDoc.getElementsByTagName('header');
+                if (headers.length === 0) {
+                    results.push('ℹ️ No <header> element found.');
+                } else {
+                    for (var hi = 0; hi < headers.length; hi++) {
+                        var hb = getStyle(headers[hi], 'background-color');
+                        if (hasVisibleBackground(hb)) {
+                            results.push('✅ <header' + (headers[hi].id ? '#' + headers[hi].id : '') + '> background-color: ' + hb);
+                        } else {
+                            results.push('❌ <header' + (headers[hi].id ? '#' + headers[hi].id : '') + '"> is missing a visible background-color (computed: ' + (hb || 'none') + ')');
+                        }
+                    }
+                }
+
+                // footer
+                var footers = iframeDoc.getElementsByTagName('footer');
+                if (footers.length === 0) {
+                    results.push('ℹ️ No <footer> element found.');
+                } else {
+                    for (var fi = 0; fi < footers.length; fi++) {
+                        var fb = getStyle(footers[fi], 'background-color');
+                        if (hasVisibleBackground(fb)) {
+                            results.push('✅ <footer' + (footers[fi].id ? '#' + footers[fi].id : '') + '> background-color: ' + fb);
+                        } else {
+                            results.push('❌ <footer' + (footers[fi].id ? '#' + footers[fi].id : '') + '"> is missing a visible background-color (computed: ' + (fb || 'none') + ')');
+                        }
+                    }
+                }
+
+                // nav:hover — check style rules for any nav:hover selector in accessible stylesheets
+                (function() {
+                    var foundHoverRule = false;
+                    var styleSheets = Array.from(iframeDoc.styleSheets || []);
+                    for (const ss of styleSheets) {
+                        try {
+                            var cssRules = ss.cssRules;
+                        } catch (e) {
+                            continue;
+                        }
+                        for (const rule of Array.from(cssRules || [])) {
+                            try {
+                                if (rule.type === CSSRule.STYLE_RULE && rule.selectorText && /(^|[ ,>+~])nav\b[^,]*:hover\b/i.test(rule.selectorText)) {
+                                    foundHoverRule = true;
+                                    results.push('✅ Found CSS rule for nav:hover: ' + rule.selectorText);
+                                    break;
+                                }
+                            } catch (e) {
+                                // ignore
+                            }
+                        }
+                        if (foundHoverRule) break;
+                    }
+                    if (!foundHoverRule) {
+                        results.push('❌ Missing a CSS rule that targets nav:hover (no visible nav hover background detected via stylesheet rules).');
+                    }
+                })();
+
+                // buttons
+                (function() {
+                    var btns = [];
+                    var bEls = iframeDoc.getElementsByTagName('button');
+                    for (var b = 0; b < bEls.length; b++) btns.push(bEls[b]);
+                    var inputs = iframeDoc.getElementsByTagName('input');
+                    for (var ii = 0; ii < inputs.length; ii++) {
+                        var t = (inputs[ii].type || '').toLowerCase();
+                        if (t === 'button' || t === 'submit' || t === 'reset') btns.push(inputs[ii]);
+                    }
+                    if (btns.length === 0) {
+                        results.push('ℹ️ No buttons or button-like inputs found.');
+                    } else {
+                        var missing = [];
+                        for (var i = 0; i < btns.length; i++) {
+                            var bg = getStyle(btns[i], 'background-color');
+                            if (!hasVisibleBackground(bg)) {
+                                var desc = btns[i].tagName.toLowerCase() + (btns[i].id ? '#' + btns[i].id : '') + (btns[i].className ? '.' + btns[i].className.split(/\s+/).join('.') : '');
+                                missing.push(desc || ('button #' + i));
+                            }
+                        }
+                        if (missing.length === 0) {
+                            results.push('✅ All buttons have a visible background-color.');
+                        } else {
+                            results.push('❌ The following buttons are missing a visible background-color: ' + missing.slice(0,10).join(', ') + (missing.length > 10 ? ' (and ' + (missing.length - 10) + ' more)' : ''));
+                        }
+                    }
+                })();
+
+                // divs — require at least one prominent div with background or report how many lack one
+                (function() {
+                    var divs = Array.from(iframeDoc.getElementsByTagName('div'));
+                    if (divs.length === 0) {
+                        results.push('ℹ️ No <div> elements found.');
+                    } else {
+                        var withBg = 0, without = 0;
+                        for (var di = 0; di < divs.length; di++) {
+                            var vb = getStyle(divs[di], 'background-color');
+                            if (hasVisibleBackground(vb)) withBg++; else without++;
+                        }
+                        if (withBg > 0) {
+                            results.push('✅ Found ' + withBg + ' <div> element(s) with a visible background-color; ' + without + ' without.');
+                        } else {
+                            results.push('❌ No <div> elements have a visible background-color (checked ' + divs.length + ' divs).');
+                        }
+                    }
+                })();
+            })();
+
+            // check foreground colors for links, headlines, buttons, and paragraphs
+            (function() {
+                function hasVisibleForeground(val) {
+                    if (!val) return false;
+                    val = val.trim().toLowerCase();
+                    if (val === 'transparent' || val === 'inherit' || val === 'initial' || val === 'none') return false;
+                    if (/^rgba\(\s*\d+,\s*\d+,\s*\d+,\s*0(?:\.0+)?\s*\)$/.test(val)) return false;
+                    return true;
+                }
+
+                function describe(el) {
+                    var desc = el.tagName.toLowerCase();
+                    if (el.id) desc += '#' + el.id;
+                    if (el.className) desc += '.' + (el.className.replace(/\s+/g, '.'));
+                    var txt = (el.textContent || '').trim().replace(/\s+/g, ' ');
+                    if (txt) desc += ' "' + txt.slice(0, 30) + (txt.length > 30 ? '…' : '') + '"';
+                    return desc;
+                }
+
+                function checkColorSet(list, label) {
+                    if (!list || list.length === 0) {
+                        results.push('ℹ️ No ' + label + ' found.');
+                        return;
+                    }
+                    var missing = [];
+                    for (var i = 0; i < list.length; i++) {
+                        var el = list[i];
+                        var col = getStyle(el, 'color');
+                        if (hasVisibleForeground(col)) {
+                            if (i < 3) results.push('✅ ' + label + ' has visible color: ' + describe(el) + ' (' + col + ')');
+                        } else {
+                            missing.push(describe(el));
+                        }
+                    }
+                    if (missing.length === 0) {
+                        results.push('✅ All ' + label + ' have a visible foreground color.');
+                    } else {
+                        results.push('❌ The following ' + label + ' are missing a visible foreground color: ' + missing.slice(0,10).join(', ') +
+                            (missing.length > 10 ? ' (and ' + (missing.length - 10) + ' more)' : ''));
+                    }
+                }
+
+                // links
+                var linkEls = Array.from(iframeDoc.getElementsByTagName('a'));
+                checkColorSet(linkEls, 'links');
+
+                // headings (h1-h6)
+                var headings = [];
+                for (var h = 1; h <= 6; h++) {
+                    var hs = iframeDoc.getElementsByTagName('h' + h);
+                    for (var j = 0; j < hs.length; j++) headings.push(hs[j]);
+                }
+                checkColorSet(headings, 'headline elements (h1-h6)');
+
+                // buttons and button-like inputs
+                var btns = [];
+                var bEls = iframeDoc.getElementsByTagName('button');
+                for (var b = 0; b < bEls.length; b++) btns.push(bEls[b]);
+                var inputs = iframeDoc.getElementsByTagName('input');
+                for (var ii = 0; ii < inputs.length; ii++) {
+                    var t = (inputs[ii].type || '').toLowerCase();
+                    if (t === 'button' || t === 'submit' || t === 'reset') btns.push(inputs[ii]);
+                }
+                checkColorSet(btns, 'buttons');
+
+                // paragraphs
+                var paras = Array.from(iframeDoc.getElementsByTagName('p'));
+                checkColorSet(paras, 'paragraphs (<p>)');
+            })();
+
+            // check CSS rules and computed styles for .icon and .logo width:80px
+            (function(){
+                function classHasRuleWidth(className) {
+                    var foundRule = false;
+                    var okRule = false;
+                    var seenValues = new Set();
+                    var styleSheets = Array.from(iframeDoc.styleSheets || []);
+                    for (const ss of styleSheets) {
+                        try {
+                            var cssRules = ss.cssRules;
+                        } catch (e) {
+                            continue;
+                        }
+                        for (const rule of Array.from(cssRules || [])) {
+                            if (rule.type === CSSRule.STYLE_RULE && rule.selectorText) {
+                                try {
+                                    if (new RegExp('\\.' + className + '\\b', 'i').test(rule.selectorText)) {
+                                        foundRule = true;
+                                        var w = (rule.style && rule.style.width) || '';
+                                        if (w) {
+                                            seenValues.add(w);
+                                            if (/^\s*80(?:\.0+)?px\s*$/i.test(w)) {
+                                                okRule = true;
+                                            }
+                                        }
+                                    }
+                                } catch (e) {
+                                    // ignore selector parsing edge cases
+                                }
+                            }
+                        }
+                    }
+                    return { foundRule: foundRule, okRule: okRule, seenValues: Array.from(seenValues) };
+                }
+
+                function checkClassWidth(className) {
+                    var res = classHasRuleWidth(className);
+                    if (res.okRule) {
+                        results.push('✅ CSS rule for .' + className + ' sets width: 80px (found in stylesheet).');
+                        return;
+                    }
+                    if (res.foundRule && res.seenValues.length > 0) {
+                        results.push('❌ CSS rule(s) for .' + className + ' set width to: ' + res.seenValues.join(', ') + ' (expected 80px).');
+                        return;
+                    }
+                    // fallback to checking computed style on elements with that class inside the iframe
+                    var elems = Array.from(iframeDoc.getElementsByClassName(className));
+                    if (elems.length === 0) {
+                        results.push('❌ No elements with class "' + className + '" were found to verify width:80px.');
+                        return;
+                    }
+                    // check computed width of first few elements
+                    var okCount = 0, checked = 0, seenWidths = new Set();
+                    for (var i = 0; i < Math.min(elems.length, 5); i++) {
+                        var cw = getStyle(elems[i], 'width') || '';
+                        seenWidths.add(cw);
+                        checked++;
+                        if (/^\s*80(?:\.0+)?px\s*$/i.test(cw)) okCount++;
+                    }
+                    if (okCount === checked) {
+                        results.push('✅ Computed width for .' + className + ' elements is 80px (' + elems.length + ' element(s) found).');
+                    } else {
+                        results.push('❌ Computed widths for .' + className + ' elements: ' + Array.from(seenWidths).join(', ') + ' (expected 80px).');
+                    }
+                }
+
+                checkClassWidth('icon');
+                checkClassWidth('logo');
+
+                // check img counts with those classes
+                var imgs = Array.from(iframeDoc.getElementsByTagName('img'));
+                var logoCount = 0, iconCount = 0;
+                for (const im of imgs) {
+                    try {
+                        if (im.classList && im.classList.contains('logo')) logoCount++;
+                        if (im.classList && im.classList.contains('icon')) iconCount++;
+                    } catch (e) {
+                        // ignore
+                    }
+                }
+                if (logoCount === 1) {
+                    results.push('✅ Exactly one <img> has class="logo" (' + logoCount + ' found).');
+                } else {
+                    results.push('❌ Expected 1 <img> with class="logo", found ' + logoCount + '.');
+                }
+                if (iconCount === 3) {
+                    results.push('✅ Exactly three <img> elements have class="icon" (' + iconCount + ' found).');
+                } else {
+                    results.push('❌ Expected 3 <img> elements with class="icon", found ' + iconCount + '.');
+                }
+            })();
+
+            (function(){
+                var anchors = Array.from(iframeDoc.getElementsByTagName('a'));
+                if (anchors.length === 0) {
+                    results.push('ℹ️ No <a> elements found to check underlines.');
+                    return;
+                }
+                var underlined = [];
+                for (var i = 0; i < anchors.length; i++) {
+                    var a = anchors[i];
+                    var td = getStyle(a, 'text-decoration') || getStyle(a, 'text-decoration-line') || '';
+                    var bbStyle = getStyle(a, 'border-bottom-style') || '';
+                    var bbWidth = getStyle(a, 'border-bottom-width') || '';
+                    var hasUnderline = /\bunderline\b/i.test(td) ||
+                        (bbStyle && bbStyle.toLowerCase() !== 'none' && bbStyle.toLowerCase() !== 'hidden' && !/^0(?:px)?/.test(bbWidth));
+                    if (hasUnderline) {
+                        var desc = a.tagName.toLowerCase();
+                        if (a.id) desc += '#' + a.id;
+                        if (a.className) desc += '.' + a.className.replace(/\s+/g, '.');
+                        var txt = (a.textContent || '').trim().replace(/\s+/g,' ');
+                        if (txt) desc += ' "' + txt.slice(0,30) + (txt.length > 30 ? '…' : '') + '"';
+                        underlined.push(desc);
+                    }
+                }
+                if (underlined.length === 0) {
+                    results.push('✅ All <a> elements have the default underline removed.');
+                } else {
+                    results.push('❌ The following <a> elements still have an underline: ' + underlined.slice(0,10).join(', ') + (underlined.length > 10 ? ' (and ' + (underlined.length - 10) + ' more)' : ''));
+                }
+            })();
 
             // check that all external links have target="_blank"
             var links = iframeDoc.getElementsByTagName('a');
