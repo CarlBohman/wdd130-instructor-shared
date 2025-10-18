@@ -297,6 +297,7 @@ function runGradingTest(activity, number) {
     var iframe = document.getElementById("originalFrame");
     var iframeDoc = iframe.contentWindow.document;
     var results = [];
+    
     if (activity == 'Rafting') {
         if (number === 5) {
             const background = iframeDoc.getElementById('background');
@@ -345,6 +346,7 @@ function runGradingTest(activity, number) {
         return;
     }
     // open a popup and show results as an unordered list
+    var html = '<html><head><title>Grading Results</title></head><body><h2>Results for ' + escapeHtml(activity) + ' #' + number + '</h2>';
     if (results.length > 0) {
         html += '<ul>' + results.map(function(r){ return '<li>' + escapeHtml(r) + '</li>'; }).join('') + '</ul>';
     } else {
