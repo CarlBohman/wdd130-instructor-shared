@@ -1,4 +1,3 @@
-javascript:
 function addJquery() {
     if (typeof jQuery == 'undefined') {
         var script_jQuery = document.createElement('script');
@@ -299,10 +298,47 @@ function runGradingTest(activity, number) {
     var iframeDoc = iframe.contentWindow.document;
     var results = [];
     if (activity == 'Rafting') {
-        const background = iframeDoc.getElementById('background');
-        if (background) {
+        if (number === 5) {
+            const background = iframeDoc.getElementById('background');
+            if (background) {
+                results.push('✅ Found element with id="background"');
+                var computedHeight = getStyle(background, 'height');
+                if (computedHeight && computedHeight !== 'auto' && computedHeight !== '0px') {
+                    results.push('✅ #background has CSS height: ' + computedHeight);
+                } else if (background.style && background.style.height) {
+                    results.push('✅ #background has inline height: ' + background.style.height);
+                } else {
+                    results.push('❌ #background is missing a CSS height');
+                }
+            } else {
+                results.push('❌ Missing element with id="background"');
+            }
+            var links = iframeDoc.getElementsByTagName('a');
+            var foundExternal = false;
+            for (const a of links) {
+                var href = a.getAttribute('href');
+                if (!href) continue;
+                try {
+                    var url = new URL(href, iframeDoc.baseURI);
+                } catch (e) {
+                    continue; // skip invalid URLs (javascript:, mailto:, etc.)
+                }
+                if (!/^https?:/.test(url.protocol)) continue; // ignore non-http(s) schemes
+                if (url.host !== iframe.contentWindow.location.host) {
+                    foundExternal = true;
+                    var target = a.getAttribute('target');
+                    if (target === '_blank') {
+                        results.push('✅ External link "' + url.href + '" has target=\"_blank\"');
+                    } else {
+                        results.push('❌ External link "' + url.href + '" is missing target=\"_blank\"');
+                    }
+                }
+            }
+            if (!foundExternal) {
+                results.push('ℹ️ No external links found.');
+            }
         } else {
-            results.push('Missing element with id="background"');
+            results.push('❌ Test Rafting #' + number + ' is not implemented yet.');
         }
     } else {
         alert('Unknown activity: ' + activity);
