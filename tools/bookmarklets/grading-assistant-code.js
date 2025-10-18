@@ -299,7 +299,188 @@ function runGradingTest(activity, number) {
     var results = [];
     
     if (activity == 'Rafting') {
-        if (number === 5) {
+        if (number === 4) {
+            // check for <style> tags inside the iframe
+            var styleTags = iframeDoc.getElementsByTagName('style');
+            if (styleTags.length > 0) {
+                results.push('❌ Found <style> tag(s) in the document; please use external CSS files instead.');
+            }
+
+            // check for at least one external stylesheet that is actually accessible
+            var linkElems = Array.from(iframeDoc.getElementsByTagName('link')).filter(function(l){
+                return (l.rel || '').toLowerCase().indexOf('stylesheet') !== -1 && /^https?:\/\//i.test(l.href || '');
+            });
+
+            if (linkElems.length === 0) {
+                results.push('ℹ️ No external <link rel=\"stylesheet\"> elements found.');
+            } else {
+                var foundWorking = false;
+                for (const linkEl of linkElems) {
+                    try {
+                        // Accessing cssRules will throw if stylesheet is blocked by CORS or failed to load
+                        var rules = linkEl.sheet && linkEl.sheet.cssRules;
+                        // If we got rules (even empty) without throwing, treat as working
+                        foundWorking = true;
+                        results.push('✅ External stylesheet loaded and accessible: ' + linkEl.href);
+                        break;
+                    } catch (e) {
+                        // stylesheet exists but is not accessible (CORS or error)
+                        results.push('❌ External stylesheet blocked or failed to load: ' + linkEl.href);
+                    }
+                }
+                if (!foundWorking) {
+                    results.push('❌ No external stylesheet links are accessible (they may be blocked by CORS or failed to load).');
+                }
+            }
+
+            // check for a single wrapper div around body
+            var bodyChildren = Array.from(iframeDoc.body.children);
+            if (bodyChildren.length === 1 && bodyChildren[0].tagName.toLowerCase() === 'div') {
+                var wrapper = bodyChildren[0];
+                results.push('✅ Body is wrapped by a single <div>');
+                // check id
+                if (wrapper.id === 'content') {
+                    results.push('✅ Wrapper div has id=\"content\"');
+                } else {
+                    results.push('❌ Wrapper div must have id=\"content\" (found \"' + (wrapper.id || '') + '\")');
+                }
+                // check computed max-width
+                var computedMaxWidth = getStyle(wrapper, 'max-width');
+                var inlineMaxWidth = wrapper.style && wrapper.style.maxWidth;
+                var found = false;
+                if (computedMaxWidth && computedMaxWidth !== 'none') {
+                    if (/^\s*1600(?:\.0+)?px\s*$/i.test(computedMaxWidth)) {
+                        results.push('✅ #content has CSS max-width: ' + computedMaxWidth);
+                        found = true;
+                    } else {
+                        // computed exists but not 1600px
+                        results.push('❌ #content max-width should be 1600px (found computed: ' + computedMaxWidth + ')');
+                        found = true;
+                    }
+                }
+                if (!found && inlineMaxWidth) {
+                    if (/^\s*1600(?:\.0+)?px\s*$/i.test(inlineMaxWidth)) {
+                        results.push('✅ #content has inline max-width: ' + inlineMaxWidth);
+                    } else {
+                        results.push('❌ #content max-width should be 1600px (found inline: ' + inlineMaxWidth + ')');
+                    }
+                    found = true;
+                }
+                if (!found) {
+                    results.push('❌ #content is missing a CSS max-width of 1600px');
+                }
+            } else {
+                results.push('❌ Body must contain a single wrapping <div id=\"content\"> that surrounds all content');
+            }
+
+            // check centering for nav links, headlines, buttons, and sections
+            (function() {
+                function describe(el) {
+                    var desc = el.tagName.toLowerCase();
+                    if (el.id) desc += '#' + el.id;
+                    if (el.className) desc += '.' + (el.className.replace(/\s+/g, '.'));
+                    var txt = (el.textContent || '').trim().replace(/\s+/g, ' ');
+                    if (txt) desc += ' "' + txt.slice(0, 30) + (txt.length > 30 ? '…' : '') + '"';
+                    return desc;
+                }
+
+                function pxValue(v) {
+                    if (!v) return null;
+                    if (v === 'auto') return 'auto';
+                    var m = v.match(/^(-?\d+(?:\.\d+)?)px$/);
+                    return m ? parseFloat(m[1]) : null;
+                }
+
+                function isCentered(el) {
+                    // check any ancestor has text-align:center
+                    var node = el;
+                    while (node && node.nodeType === 1) {
+                        var ta = getStyle(node, 'text-align');
+                        if (ta && ta.toLowerCase() === 'center') return { ok: true, reason: 'ancestor text-align:center on ' + describe(node) };
+                        node = node.parentElement;
+                    }
+
+                    // check parent flex justify-content:center
+                    var parent = el.parentElement;
+                    if (parent) {
+                        var disp = (getStyle(parent, 'display') || '').toLowerCase();
+                        if (disp.indexOf('flex') !== -1) {
+                            var jc = (getStyle(parent, 'justify-content') || '').toLowerCase();
+                            if (jc.indexOf('center') !== -1) return { ok: true, reason: 'parent flex justify-content:center on ' + describe(parent) };
+                        }
+                    }
+
+                    // check margins auto or symmetric margins
+                    var ml = getStyle(el, 'margin-left');
+                    var mr = getStyle(el, 'margin-right');
+                    if (ml === 'auto' && mr === 'auto') return { ok: true, reason: 'margin-left and margin-right are auto' };
+                    var mlpx = pxValue(ml), mrpx = pxValue(mr);
+                    if (typeof mlpx === 'number' && typeof mrpx === 'number') {
+                        if (Math.abs(mlpx - mrpx) <= 2) return { ok: true, reason: 'symmetric margins (' + mlpx + 'px / ' + mrpx + 'px)' };
+                    }
+
+                    return { ok: false, reason: 'no centering CSS found' };
+                }
+
+                function checkSet(list, label) {
+                    if (!list || list.length === 0) {
+                        results.push('ℹ️ No ' + label + ' found.');
+                        return;
+                    }
+                    var notCentered = [];
+                    for (var i = 0; i < list.length; i++) {
+                        var el = list[i];
+                        var res = isCentered(el);
+                        if (res.ok) {
+                            // report a few positives for visibility (but not every single element)
+                            if (i < 3) results.push('✅ ' + label + ' centered: ' + describe(el) + ' (' + res.reason + ')');
+                        } else {
+                            notCentered.push(describe(el));
+                        }
+                    }
+                    if (notCentered.length === 0) {
+                        results.push('✅ All ' + label + ' are centered.');
+                    } else {
+                        results.push('❌ The following ' + label + ' are NOT centered: ' + notCentered.slice(0,10).join(', ') +
+                            (notCentered.length > 10 ? ' (and ' + (notCentered.length - 10) + ' more)' : ''));
+                    }
+                }
+
+                // Nav links
+                var navAnchors = [];
+                var navs = iframeDoc.getElementsByTagName('nav');
+                for (var ni = 0; ni < navs.length; ni++) {
+                    var nav = navs[ni];
+                    var anchors = nav.getElementsByTagName('a');
+                    for (var ai = 0; ai < anchors.length; ai++) navAnchors.push(anchors[ai]);
+                }
+                checkSet(navAnchors, 'nav links');
+
+                // Headline elements (h1-h6)
+                var headlines = [];
+                for (var h = 1; h <= 6; h++) {
+                    var hs = iframeDoc.getElementsByTagName('h' + h);
+                    for (var j = 0; j < hs.length; j++) headlines.push(hs[j]);
+                }
+                checkSet(headlines, 'headline elements (h1-h6)');
+
+                // Buttons (button, input[type=button|submit|reset])
+                var buttons = [];
+                var bEls = iframeDoc.getElementsByTagName('button');
+                for (var b = 0; b < bEls.length; b++) buttons.push(bEls[b]);
+                var inputs = iframeDoc.getElementsByTagName('input');
+                for (var ii = 0; ii < inputs.length; ii++) {
+                    var t = (inputs[ii].type || '').toLowerCase();
+                    if (t === 'button' || t === 'submit' || t === 'reset') buttons.push(inputs[ii]);
+                }
+                checkSet(buttons, 'buttons');
+
+                // Section elements
+                var sections = iframeDoc.getElementsByTagName('section');
+                checkSet(Array.prototype.slice.call(sections), 'section elements');
+            })();
+
+            // check for element with id="background" and verify it has a CSS height
             const background = iframeDoc.getElementById('background');
             if (background) {
                 results.push('✅ Found element with id="background"');
@@ -314,6 +495,8 @@ function runGradingTest(activity, number) {
             } else {
                 results.push('❌ Missing element with id="background"');
             }
+
+            // check that all external links have target="_blank"
             var links = iframeDoc.getElementsByTagName('a');
             var foundExternal = false;
             for (const a of links) {
