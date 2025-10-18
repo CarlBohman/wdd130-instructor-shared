@@ -300,7 +300,7 @@ function runGradingTest(activity, number) {
     
     if (activity == 'Rafting') {
         if (number == 4) {
-            runGradingTestRafting4(iframeDoc, results);
+            runGradingTestRafting4(iframe, iframeDoc, results);
         } else {
             results.push('❌ Test Rafting #' + number + ' is not implemented yet.');
         }
@@ -330,7 +330,7 @@ function runGradingAssistant() {
         iframe.contentWindow.addEventListener('load', displayFontsAndColors)
     }
 }
-function runGradingTestRafting4(iframeDoc, results) {
+function runGradingTestRafting4(iframe, iframeDoc, results) {
     // check for <style> tags inside the iframe
     var styleTags = iframeDoc.getElementsByTagName('style');
     if (styleTags.length > 0) {
