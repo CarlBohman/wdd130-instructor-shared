@@ -458,15 +458,6 @@ function runGradingTestRafting4(iframe, iframeDoc, results) {
                 }
             }
 
-            // check margins auto or symmetric margins
-            var ml = getStyle(el, 'margin-left');
-            var mr = getStyle(el, 'margin-right');
-            if (ml === 'auto' && mr === 'auto') return { ok: true, reason: 'margin-left and margin-right are auto' };
-            var mlpx = pxValue(ml), mrpx = pxValue(mr);
-            if (typeof mlpx === 'number' && typeof mrpx === 'number') {
-                if (Math.abs(mlpx - mrpx) <= 2) return { ok: true, reason: 'symmetric margins (' + mlpx + 'px / ' + mrpx + 'px)' };
-            }
-
             return { ok: false, reason: 'no centering CSS found' };
         }
 
