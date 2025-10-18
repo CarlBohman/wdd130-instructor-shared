@@ -311,7 +311,15 @@ function runGradingTest(activity, number) {
     // open a popup and show results as an unordered list
     var html = '<html><head><title>Grading Results</title></head><body><h2>Results for ' + escapeHtml(activity) + ' #' + number + '</h2>';
     if (results.length > 0) {
-        html += '<ul>' + results.map(function(r){ return '<li>' + escapeHtml(r) + '</li>'; }).join('') + '</ul>';
+        (function() {
+            function renderItem(item) {
+            if (Array.isArray(item)) {
+                return '<li>Sub-items: <ul>' + item.map(renderItem).join('') + '</ul></li>';
+            }
+            return '<li>' + escapeHtml(item) + '</li>';
+            }
+            html += '<ol>' + results.map(renderItem).join('') + '</ol>';
+        })();
     } else {
         html += '<p>No results found.</p>';
     }
@@ -332,80 +340,89 @@ function runGradingAssistant() {
 }
 function runGradingTestRafting4(iframe, iframeDoc, results) {
     // check for <style> tags inside the iframe
-    var styleTags = iframeDoc.getElementsByTagName('style');
-    if (styleTags.length > 0) {
-        results.push('❌ Found <style> tag(s) in the document; please use external CSS files instead.');
-    }
+    (function() {
+        var subResults = [];
+        var styleTags = iframeDoc.getElementsByTagName('style');
+        if (styleTags.length > 0) {
+            subResults.push('❌ Found <style> tag(s) in the document; please use external CSS files instead.');
+        }
 
-    // check for at least one external stylesheet that is actually accessible
-    var linkElems = Array.from(iframeDoc.getElementsByTagName('link')).filter(function(l){
-        return (l.rel || '').toLowerCase().indexOf('stylesheet') !== -1 && /^https?:\/\//i.test(l.href || '');
-    });
+        // check for at least one external stylesheet that is actually accessible
+        var linkElems = Array.from(iframeDoc.getElementsByTagName('link')).filter(function(l){
+            return (l.rel || '').toLowerCase().indexOf('stylesheet') !== -1 && /^https?:\/\//i.test(l.href || '');
+        });
 
-    if (linkElems.length === 0) {
-        results.push('ℹ️ No external <link rel=\"stylesheet\"> elements found.');
-    } else {
-        var foundWorking = false;
-        for (const linkEl of linkElems) {
-            try {
-                // Accessing cssRules will throw if stylesheet is blocked by CORS or failed to load
-                var rules = linkEl.sheet && linkEl.sheet.cssRules;
-                // If we got rules (even empty) without throwing, treat as working
-                foundWorking = true;
-                results.push('✅ External stylesheet loaded and accessible: ' + linkEl.href);
-                break;
-            } catch (e) {
-                // stylesheet exists but is not accessible (CORS or error)
-                results.push('❌ External stylesheet blocked or failed to load: ' + linkEl.href);
+        if (linkElems.length === 0) {
+            subResults.push('ℹ️ No external <link rel=\"stylesheet\"> elements found.');
+        } else {
+            var foundWorking = false;
+            for (const linkEl of linkElems) {
+                try {
+                    // Accessing cssRules will throw if stylesheet is blocked by CORS or failed to load
+                    var rules = linkEl.sheet && linkEl.sheet.cssRules;
+                    // If we got rules (even empty) without throwing, treat as working
+                    foundWorking = true;
+                    subResults.push('✅ External stylesheet loaded and accessible: ' + linkEl.href);
+                    break;
+                } catch (e) {
+                    // stylesheet exists but is not accessible (CORS or error)
+                    subResults.push('❌ External stylesheet blocked or failed to load: ' + linkEl.href);
+                }
+            }
+            if (!foundWorking) {
+                subResults.push('❌ No external stylesheet links are accessible (they may be blocked by CORS or failed to load).');
             }
         }
-        if (!foundWorking) {
-            results.push('❌ No external stylesheet links are accessible (they may be blocked by CORS or failed to load).');
-        }
-    }
+        results.push(subResults);
+    })();
 
     // check for a single wrapper div around body
-    var bodyChildren = Array.from(iframeDoc.body.children);
-    if (bodyChildren.length === 1 && bodyChildren[0].tagName.toLowerCase() === 'div') {
-        var wrapper = bodyChildren[0];
-        results.push('✅ Body is wrapped by a single <div>');
-        // check id
-        if (wrapper.id === 'content') {
-            results.push('✅ Wrapper div has id=\"content\"');
+    (function() {
+        var subResults = [];
+        var bodyChildren = Array.from(iframeDoc.body.children);
+        if (bodyChildren.length === 1 && bodyChildren[0].tagName.toLowerCase() === 'div') {
+            var wrapper = bodyChildren[0];
+            subResults.push('✅ Body is wrapped by a single <div>');
+            // check id
+            if (wrapper.id === 'content') {
+                subResults.push('✅ Wrapper div has id=\"content\"');
+            } else {
+                subResults.push('❌ Wrapper div must have id=\"content\" (found \"' + (wrapper.id || '') + '\")');
+            }
+            // check computed max-width
+            var computedMaxWidth = getStyle(wrapper, 'max-width');
+            var inlineMaxWidth = wrapper.style && wrapper.style.maxWidth;
+            var found = false;
+            if (computedMaxWidth && computedMaxWidth !== 'none') {
+                if (/^\s*1600(?:\.0+)?px\s*$/i.test(computedMaxWidth)) {
+                    subResults.push('✅ #content has CSS max-width: ' + computedMaxWidth);
+                    found = true;
+                } else {
+                    // computed exists but not 1600px
+                    subResults.push('❌ #content max-width should be 1600px (found computed: ' + computedMaxWidth + ')');
+                    found = true;
+                }
+            }
+            if (!found && inlineMaxWidth) {
+                if (/^\s*1600(?:\.0+)?px\s*$/i.test(inlineMaxWidth)) {
+                    subResults.push('✅ #content has inline max-width: ' + inlineMaxWidth);
+                } else {
+                    subResults.push('❌ #content max-width should be 1600px (found inline: ' + inlineMaxWidth + ')');
+                }
+                found = true;
+            }
+            if (!found) {
+                subResults.push('❌ #content is missing a CSS max-width of 1600px');
+            }
         } else {
-            results.push('❌ Wrapper div must have id=\"content\" (found \"' + (wrapper.id || '') + '\")');
+            subResults.push('❌ Body must contain a single wrapping <div id=\"content\"> that surrounds all content');
         }
-        // check computed max-width
-        var computedMaxWidth = getStyle(wrapper, 'max-width');
-        var inlineMaxWidth = wrapper.style && wrapper.style.maxWidth;
-        var found = false;
-        if (computedMaxWidth && computedMaxWidth !== 'none') {
-            if (/^\s*1600(?:\.0+)?px\s*$/i.test(computedMaxWidth)) {
-                results.push('✅ #content has CSS max-width: ' + computedMaxWidth);
-                found = true;
-            } else {
-                // computed exists but not 1600px
-                results.push('❌ #content max-width should be 1600px (found computed: ' + computedMaxWidth + ')');
-                found = true;
-            }
-        }
-        if (!found && inlineMaxWidth) {
-            if (/^\s*1600(?:\.0+)?px\s*$/i.test(inlineMaxWidth)) {
-                results.push('✅ #content has inline max-width: ' + inlineMaxWidth);
-            } else {
-                results.push('❌ #content max-width should be 1600px (found inline: ' + inlineMaxWidth + ')');
-            }
-            found = true;
-        }
-        if (!found) {
-            results.push('❌ #content is missing a CSS max-width of 1600px');
-        }
-    } else {
-        results.push('❌ Body must contain a single wrapping <div id=\"content\"> that surrounds all content');
-    }
+        results.push(subResults);
+    })();
 
     // check centering for nav links, headlines, buttons, and sections
     (function() {
+        var subResults = [];
         function describe(el) {
             var desc = el.tagName.toLowerCase();
             if (el.id) desc += '#' + el.id;
@@ -455,7 +472,7 @@ function runGradingTestRafting4(iframe, iframeDoc, results) {
 
         function checkSet(list, label) {
             if (!list || list.length === 0) {
-                results.push('ℹ️ No ' + label + ' found.');
+                subResults.push('ℹ️ No ' + label + ' found.');
                 return;
             }
             var notCentered = [];
@@ -464,15 +481,15 @@ function runGradingTestRafting4(iframe, iframeDoc, results) {
                 var res = isCentered(el);
                 if (res.ok) {
                     // report a few positives for visibility (but not every single element)
-                    if (i < 3) results.push('✅ ' + label + ' centered: ' + describe(el) + ' (' + res.reason + ')');
+                    if (i < 3) subResults.push('✅ ' + label + ' centered: ' + describe(el) + ' (' + res.reason + ')');
                 } else {
                     notCentered.push(describe(el));
                 }
             }
             if (notCentered.length === 0) {
-                results.push('✅ All ' + label + ' are centered.');
+                subResults.push('✅ All ' + label + ' are centered.');
             } else {
-                results.push('❌ The following ' + label + ' are NOT centered: ' + notCentered.slice(0,10).join(', ') +
+                subResults.push('❌ The following ' + label + ' are NOT centered: ' + notCentered.slice(0,10).join(', ') +
                     (notCentered.length > 10 ? ' (and ' + (notCentered.length - 10) + ' more)' : ''));
             }
         }
@@ -509,26 +526,33 @@ function runGradingTestRafting4(iframe, iframeDoc, results) {
         // Section elements
         var sections = iframeDoc.getElementsByTagName('section');
         checkSet(Array.prototype.slice.call(sections), 'section elements');
+
+        results.push(subResults);
     })();
 
     // check for element with id="background" and verify it has a CSS height
-    const background = iframeDoc.getElementById('background');
-    if (background) {
-        results.push('✅ Found element with id="background"');
-        var computedHeight = getStyle(background, 'height');
-        if (computedHeight && computedHeight !== 'auto' && computedHeight !== '0px') {
-            results.push('✅ #background has CSS height: ' + computedHeight);
-        } else if (background.style && background.style.height) {
-            results.push('✅ #background has inline height: ' + background.style.height);
+    (function() {
+        var subResults = [];
+        const background = iframeDoc.getElementById('background');
+        if (background) {
+            subResults.push('✅ Found element with id="background"');
+            var computedHeight = getStyle(background, 'height');
+            if (computedHeight && computedHeight !== 'auto' && computedHeight !== '0px') {
+                subResults.push('✅ #background has CSS height: ' + computedHeight);
+            } else if (background.style && background.style.height) {
+                subResults.push('✅ #background has inline height: ' + background.style.height);
+            } else {
+                subResults.push('❌ #background is missing a CSS height');
+            }
         } else {
-            results.push('❌ #background is missing a CSS height');
+            subResults.push('❌ Missing element with id="background"');
         }
-    } else {
-        results.push('❌ Missing element with id="background"');
-    }
+        results.push(subResults);
+    })();
 
     // check background colors for body, header, nav:hover, buttons, divs, and footer
     (function() {
+        var subResults = [];
         function hasVisibleBackground(val) {
             if (!val) return false;
             val = val.trim().toLowerCase();
@@ -541,22 +565,22 @@ function runGradingTestRafting4(iframe, iframeDoc, results) {
         // body
         var bodyBg = getStyle(iframeDoc.body, 'background-color');
         if (hasVisibleBackground(bodyBg)) {
-            results.push('✅ body background-color set: ' + bodyBg);
+            subResults.push('✅ body background-color set: ' + bodyBg);
         } else {
-            results.push('❌ body is missing a visible background-color (computed: ' + (bodyBg || 'none') + ')');
+            subResults.push('❌ body is missing a visible background-color (computed: ' + (bodyBg || 'none') + ')');
         }
 
         // header
         var headers = iframeDoc.getElementsByTagName('header');
         if (headers.length === 0) {
-            results.push('ℹ️ No <header> element found.');
+            subResults.push('ℹ️ No <header> element found.');
         } else {
             for (var hi = 0; hi < headers.length; hi++) {
                 var hb = getStyle(headers[hi], 'background-color');
                 if (hasVisibleBackground(hb)) {
-                    results.push('✅ <header' + (headers[hi].id ? '#' + headers[hi].id : '') + '> background-color: ' + hb);
+                    subResults.push('✅ <header' + (headers[hi].id ? '#' + headers[hi].id : '') + '> background-color: ' + hb);
                 } else {
-                    results.push('❌ <header' + (headers[hi].id ? '#' + headers[hi].id : '') + '"> is missing a visible background-color (computed: ' + (hb || 'none') + ')');
+                    subResults.push('❌ <header' + (headers[hi].id ? '#' + headers[hi].id : '') + '"> is missing a visible background-color (computed: ' + (hb || 'none') + ')');
                 }
             }
         }
@@ -564,14 +588,14 @@ function runGradingTestRafting4(iframe, iframeDoc, results) {
         // footer
         var footers = iframeDoc.getElementsByTagName('footer');
         if (footers.length === 0) {
-            results.push('ℹ️ No <footer> element found.');
+            subResults.push('ℹ️ No <footer> element found.');
         } else {
             for (var fi = 0; fi < footers.length; fi++) {
                 var fb = getStyle(footers[fi], 'background-color');
                 if (hasVisibleBackground(fb)) {
-                    results.push('✅ <footer' + (footers[fi].id ? '#' + footers[fi].id : '') + '> background-color: ' + fb);
+                    subResults.push('✅ <footer' + (footers[fi].id ? '#' + footers[fi].id : '') + '> background-color: ' + fb);
                 } else {
-                    results.push('❌ <footer' + (footers[fi].id ? '#' + footers[fi].id : '') + '"> is missing a visible background-color (computed: ' + (fb || 'none') + ')');
+                    subResults.push('❌ <footer' + (footers[fi].id ? '#' + footers[fi].id : '') + '"> is missing a visible background-color (computed: ' + (fb || 'none') + ')');
                 }
             }
         }
@@ -590,7 +614,7 @@ function runGradingTestRafting4(iframe, iframeDoc, results) {
                     try {
                         if (rule.type === CSSRule.STYLE_RULE && rule.selectorText && /(^|[ ,>+~])nav\b[^,]*:hover\b/i.test(rule.selectorText)) {
                             foundHoverRule = true;
-                            results.push('✅ Found CSS rule for nav:hover: ' + rule.selectorText);
+                            subResults.push('✅ Found CSS rule for nav:hover: ' + rule.selectorText);
                             break;
                         }
                     } catch (e) {
@@ -600,7 +624,7 @@ function runGradingTestRafting4(iframe, iframeDoc, results) {
                 if (foundHoverRule) break;
             }
             if (!foundHoverRule) {
-                results.push('❌ Missing a CSS rule that targets nav:hover (no visible nav hover background detected via stylesheet rules).');
+                subResults.push('❌ Missing a CSS rule that targets nav:hover (no visible nav hover background detected via stylesheet rules).');
             }
         })();
 
@@ -615,7 +639,7 @@ function runGradingTestRafting4(iframe, iframeDoc, results) {
                 if (t === 'button' || t === 'submit' || t === 'reset') btns.push(inputs[ii]);
             }
             if (btns.length === 0) {
-                results.push('ℹ️ No buttons or button-like inputs found.');
+                subResults.push('ℹ️ No buttons or button-like inputs found.');
             } else {
                 var missing = [];
                 for (var i = 0; i < btns.length; i++) {
@@ -626,9 +650,9 @@ function runGradingTestRafting4(iframe, iframeDoc, results) {
                     }
                 }
                 if (missing.length === 0) {
-                    results.push('✅ All buttons have a visible background-color.');
+                    subResults.push('✅ All buttons have a visible background-color.');
                 } else {
-                    results.push('❌ The following buttons are missing a visible background-color: ' + missing.slice(0,10).join(', ') + (missing.length > 10 ? ' (and ' + (missing.length - 10) + ' more)' : ''));
+                    subResults.push('❌ The following buttons are missing a visible background-color: ' + missing.slice(0,10).join(', ') + (missing.length > 10 ? ' (and ' + (missing.length - 10) + ' more)' : ''));
                 }
             }
         })();
@@ -637,7 +661,7 @@ function runGradingTestRafting4(iframe, iframeDoc, results) {
         (function() {
             var divs = Array.from(iframeDoc.getElementsByTagName('div'));
             if (divs.length === 0) {
-                results.push('ℹ️ No <div> elements found.');
+                subResults.push('ℹ️ No <div> elements found.');
             } else {
                 var withBg = 0, without = 0;
                 for (var di = 0; di < divs.length; di++) {
@@ -645,16 +669,19 @@ function runGradingTestRafting4(iframe, iframeDoc, results) {
                     if (hasVisibleBackground(vb)) withBg++; else without++;
                 }
                 if (withBg > 0) {
-                    results.push('✅ Found ' + withBg + ' <div> element(s) with a visible background-color; ' + without + ' without.');
+                    subResults.push('✅ Found ' + withBg + ' <div> element(s) with a visible background-color; ' + without + ' without.');
                 } else {
-                    results.push('❌ No <div> elements have a visible background-color (checked ' + divs.length + ' divs).');
+                    subResults.push('❌ No <div> elements have a visible background-color (checked ' + divs.length + ' divs).');
                 }
             }
         })();
+
+        results.push(subResults);
     })();
 
     // check foreground colors for links, headlines, buttons, and paragraphs
     (function() {
+        var subResults = [];
         function hasVisibleForeground(val) {
             if (!val) return false;
             val = val.trim().toLowerCase();
@@ -674,7 +701,7 @@ function runGradingTestRafting4(iframe, iframeDoc, results) {
 
         function checkColorSet(list, label) {
             if (!list || list.length === 0) {
-                results.push('ℹ️ No ' + label + ' found.');
+                subResults.push('ℹ️ No ' + label + ' found.');
                 return;
             }
             var missing = [];
@@ -682,15 +709,15 @@ function runGradingTestRafting4(iframe, iframeDoc, results) {
                 var el = list[i];
                 var col = getStyle(el, 'color');
                 if (hasVisibleForeground(col)) {
-                    if (i < 3) results.push('✅ ' + label + ' has visible color: ' + describe(el) + ' (' + col + ')');
+                    if (i < 3) subResults.push('✅ ' + label + ' has visible color: ' + describe(el) + ' (' + col + ')');
                 } else {
                     missing.push(describe(el));
                 }
             }
             if (missing.length === 0) {
-                results.push('✅ All ' + label + ' have a visible foreground color.');
+                subResults.push('✅ All ' + label + ' have a visible foreground color.');
             } else {
-                results.push('❌ The following ' + label + ' are missing a visible foreground color: ' + missing.slice(0,10).join(', ') +
+                subResults.push('❌ The following ' + label + ' are missing a visible foreground color: ' + missing.slice(0,10).join(', ') +
                     (missing.length > 10 ? ' (and ' + (missing.length - 10) + ' more)' : ''));
             }
         }
@@ -721,10 +748,13 @@ function runGradingTestRafting4(iframe, iframeDoc, results) {
         // paragraphs
         var paras = Array.from(iframeDoc.getElementsByTagName('p'));
         checkColorSet(paras, 'paragraphs (<p>)');
+
+        results.push(subResults);
     })();
 
     // check CSS rules and computed styles for .icon and .logo width:80px
     (function(){
+        var subResults = [];
         function classHasRuleWidth(className) {
             var foundRule = false;
             var okRule = false;
@@ -761,17 +791,17 @@ function runGradingTestRafting4(iframe, iframeDoc, results) {
         function checkClassWidth(className) {
             var res = classHasRuleWidth(className);
             if (res.okRule) {
-                results.push('✅ CSS rule for .' + className + ' sets width: 80px (found in stylesheet).');
+                subResults.push('✅ CSS rule for .' + className + ' sets width: 80px (found in stylesheet).');
                 return;
             }
             if (res.foundRule && res.seenValues.length > 0) {
-                results.push('❌ CSS rule(s) for .' + className + ' set width to: ' + res.seenValues.join(', ') + ' (expected 80px).');
+                subResults.push('❌ CSS rule(s) for .' + className + ' set width to: ' + res.seenValues.join(', ') + ' (expected 80px).');
                 return;
             }
             // fallback to checking computed style on elements with that class inside the iframe
             var elems = Array.from(iframeDoc.getElementsByClassName(className));
             if (elems.length === 0) {
-                results.push('❌ No elements with class "' + className + '" were found to verify width:80px.');
+                subResults.push('❌ No elements with class "' + className + '" were found to verify width:80px.');
                 return;
             }
             // check computed width of first few elements
@@ -783,9 +813,9 @@ function runGradingTestRafting4(iframe, iframeDoc, results) {
                 if (/^\s*80(?:\.0+)?px\s*$/i.test(cw)) okCount++;
             }
             if (okCount === checked) {
-                results.push('✅ Computed width for .' + className + ' elements is 80px (' + elems.length + ' element(s) found).');
+                subResults.push('✅ Computed width for .' + className + ' elements is 80px (' + elems.length + ' element(s) found).');
             } else {
-                results.push('❌ Computed widths for .' + className + ' elements: ' + Array.from(seenWidths).join(', ') + ' (expected 80px).');
+                subResults.push('❌ Computed widths for .' + className + ' elements: ' + Array.from(seenWidths).join(', ') + ' (expected 80px).');
             }
         }
 
@@ -804,21 +834,24 @@ function runGradingTestRafting4(iframe, iframeDoc, results) {
             }
         }
         if (logoCount === 1) {
-            results.push('✅ Exactly one <img> has class="logo" (' + logoCount + ' found).');
+            subResults.push('✅ Exactly one <img> has class="logo" (' + logoCount + ' found).');
         } else {
-            results.push('❌ Expected 1 <img> with class="logo", found ' + logoCount + '.');
+            subResults.push('❌ Expected 1 <img> with class="logo", found ' + logoCount + '.');
         }
         if (iconCount === 3) {
-            results.push('✅ Exactly three <img> elements have class="icon" (' + iconCount + ' found).');
+            subResults.push('✅ Exactly three <img> elements have class="icon" (' + iconCount + ' found).');
         } else {
-            results.push('❌ Expected 3 <img> elements with class="icon", found ' + iconCount + '.');
+            subResults.push('❌ Expected 3 <img> elements with class="icon", found ' + iconCount + '.');
         }
+        results.push(subResults);
     })();
 
+    // check that all <a> elements have underlines removed
     (function(){
+        var subResults = [];
         var anchors = Array.from(iframeDoc.getElementsByTagName('a'));
         if (anchors.length === 0) {
-            results.push('ℹ️ No <a> elements found to check underlines.');
+            subResults.push('ℹ️ No <a> elements found to check underlines.');
             return;
         }
         var underlined = [];
@@ -839,37 +872,42 @@ function runGradingTestRafting4(iframe, iframeDoc, results) {
             }
         }
         if (underlined.length === 0) {
-            results.push('✅ All <a> elements have the default underline removed.');
+            subResults.push('✅ All <a> elements have the default underline removed.');
         } else {
-            results.push('❌ The following <a> elements still have an underline: ' + underlined.slice(0,10).join(', ') + (underlined.length > 10 ? ' (and ' + (underlined.length - 10) + ' more)' : ''));
+            subResults.push('❌ The following <a> elements still have an underline: ' + underlined.slice(0,10).join(', ') + (underlined.length > 10 ? ' (and ' + (underlined.length - 10) + ' more)' : ''));
         }
+        results.push(subResults);
     })();
 
     // check that all external links have target="_blank"
-    var links = iframeDoc.getElementsByTagName('a');
-    var foundExternal = false;
-    for (const a of links) {
-        var href = a.getAttribute('href');
-        if (!href) continue;
-        try {
-            var url = new URL(href, iframeDoc.baseURI);
-        } catch (e) {
-            continue; // skip invalid URLs (javascript:, mailto:, etc.)
-        }
-        if (!/^https?:/.test(url.protocol)) continue; // ignore non-http(s) schemes
-        if (url.host !== iframe.contentWindow.location.host) {
-            foundExternal = true;
-            var target = a.getAttribute('target');
-            if (target === '_blank') {
-                results.push('✅ External link "' + url.href + '" has target=\"_blank\"');
-            } else {
-                results.push('❌ External link "' + url.href + '" is missing target=\"_blank\"');
+    (function() {
+        var subResults = [];
+        var links = iframeDoc.getElementsByTagName('a');
+        var foundExternal = false;
+        for (const a of links) {
+            var href = a.getAttribute('href');
+            if (!href) continue;
+            try {
+                var url = new URL(href, iframeDoc.baseURI);
+            } catch (e) {
+                continue; // skip invalid URLs (javascript:, mailto:, etc.)
+            }
+            if (!/^https?:/.test(url.protocol)) continue; // ignore non-http(s) schemes
+            if (url.host !== iframe.contentWindow.location.host) {
+                foundExternal = true;
+                var target = a.getAttribute('target');
+                if (target === '_blank') {
+                    subResults.push('✅ External link "' + url.href + '" has target=\"_blank\"');
+                } else {
+                    subResults.push('❌ External link "' + url.href + '" is missing target=\"_blank\"');
+                }
             }
         }
-    }
-    if (!foundExternal) {
-        results.push('ℹ️ No external links found.');
-    }
+        if (!foundExternal) {
+            subResults.push('ℹ️ No external links found.');
+        }
+        results.push(subResults);
+    })();
 
     return results;
 }
