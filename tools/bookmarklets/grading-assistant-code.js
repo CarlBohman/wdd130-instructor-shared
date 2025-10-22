@@ -126,16 +126,16 @@ function createIframe() {
             if (element.tagName.toLowerCase() != 'title')
                 element.parentNode.removeChild(element);
         }
-        iframe = top.document.body.getElementsByTagName('iframe')[0];
-        if (iframe == null) {
-            alert("Iframe not found");
-            return;
-        }
         // wait (synchronously) up to 5s for the iframe's document to be available/loaded
         try {
             var _start = Date.now();
             var _timeout = 5000; // ms
             while (true) {
+                iframe = top.document.body.getElementsByTagName('iframe')[0];
+                if (iframe == null) {
+                    alert("Iframe not found");
+                    return;
+                }
                 if (iframe && iframe.contentWindow && iframe.contentWindow.document) {
                     var _doc = iframe.contentWindow.document;
                     if (_doc.readyState === 'complete' || _doc.body) break;
