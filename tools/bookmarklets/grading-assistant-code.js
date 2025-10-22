@@ -126,6 +126,11 @@ function createIframe() {
             if (element.tagName.toLowerCase() != 'title')
                 element.parentNode.removeChild(element);
         }
+        iframe = top.document.body.getElementsByTagName('iframe')[0];
+        if (iframe == null) {
+            alert("Iframe not found");
+            return;
+        }
         for (const element of iframe.contentWindow.document.body.getElementsByTagName('a'))
         {
             if (element.getAttribute('target') == null) element.setAttribute('target', '_top');
