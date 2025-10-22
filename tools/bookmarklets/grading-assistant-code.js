@@ -131,13 +131,25 @@ function createIframe() {
             alert("Iframe not found");
             return;
         }
-        console.log(iframe.contentWindow.document);
-        console.log(iframe.contentWindow.document.body);
-        iframe.contentWindow.document.body.focus();
+        // wait (synchronously) up to 5s for the iframe's document to be available/loaded
+        try {
+            var _start = Date.now();
+            var _timeout = 5000; // ms
+            while (true) {
+                if (iframe && iframe.contentWindow && iframe.contentWindow.document) {
+                    var _doc = iframe.contentWindow.document;
+                    if (_doc.readyState === 'complete' || _doc.body) break;
+                }
+                if (Date.now() - _start > _timeout) break;
+            }
+        } catch (e) {
+            // ignore and continue if access throws
+        }
         for (const element of iframe.contentWindow.document.html.body.getElementsByTagName('a'))
         {
             if (element.getAttribute('target') == null) element.setAttribute('target', '_top');
         }
+        iframe.contentWindow.document.body.focus();
         cf = document.createElement("div");
         cf.id = "colors_and_fonts";
         document.body.insertBefore(cf, document.body.firstChild);
