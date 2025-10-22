@@ -132,6 +132,7 @@ function createIframe() {
             return;
         }
         console.log(iframe.contentWindow.document);
+        console.log(iframe.contentWindow.document.body);
         for (const element of iframe.contentWindow.document.body.getElementsByTagName('a'))
         {
             if (element.getAttribute('target') == null) element.setAttribute('target', '_top');
