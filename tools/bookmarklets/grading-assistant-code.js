@@ -132,13 +132,12 @@ function createIframe() {
             return;
         }
         console.log(iframe.contentWindow.document);
-        console.log(iframe.contentWindow.document.html.body);
         console.log(iframe.contentWindow.document.body);
+        iframe.contentWindow.document.body.focus();
         for (const element of iframe.contentWindow.document.html.body.getElementsByTagName('a'))
         {
             if (element.getAttribute('target') == null) element.setAttribute('target', '_top');
         }
-        iframe.contentWindow.document.body.focus();
         cf = document.createElement("div");
         cf.id = "colors_and_fonts";
         document.body.insertBefore(cf, document.body.firstChild);
