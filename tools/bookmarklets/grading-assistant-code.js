@@ -131,6 +131,7 @@ function createIframe() {
             alert("Iframe not found");
             return;
         }
+        console.log(iframe.contentWindow.document);
         for (const element of iframe.contentWindow.document.body.getElementsByTagName('a'))
         {
             if (element.getAttribute('target') == null) element.setAttribute('target', '_top');
