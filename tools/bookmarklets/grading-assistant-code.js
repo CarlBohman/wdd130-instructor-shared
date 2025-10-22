@@ -919,7 +919,7 @@ function runGradingTestRafting4(iframe, iframeDoc, results) {
 
     return results;
 }
-function runGradingTestRafting4(iframe, iframeDoc, results) {
+function runGradingTestRafting5(iframe, iframeDoc, results) {
     // check for margin/padding rules in stylesheets
     (function() {
         var subResults = [];
