@@ -145,7 +145,7 @@ function createIframe() {
         } catch (e) {
             // ignore and continue if access throws
         }
-        for (const element of iframe.contentWindow.document.html.body.getElementsByTagName('a'))
+        for (const element of iframe.contentWindow.document.body.getElementsByTagName('a'))
         {
             if (element.getAttribute('target') == null) element.setAttribute('target', '_top');
         }
