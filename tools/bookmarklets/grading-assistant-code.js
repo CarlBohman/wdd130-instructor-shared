@@ -301,6 +301,8 @@ function runGradingTest(activity, number) {
     if (activity == 'Rafting') {
         if (number == 4) {
             runGradingTestRafting4(iframe, iframeDoc, results);
+        } else if (number == 5) {
+            runGradingTestRafting5(iframe, iframeDoc, results);
         } else {
             results.push('❌ Test Rafting #' + number + ' is not implemented yet.');
         }
@@ -457,6 +459,17 @@ function runGradingTestRafting4(iframe, iframeDoc, results) {
                     if (jc.indexOf('center') !== -1) return { ok: true, reason: 'parent flex justify-content:center on ' + describe(parent) };
                 }
             }
+
+/*
+            // check margins auto or symmetric margins
+            var ml = getStyle(el, 'margin-left');
+            var mr = getStyle(el, 'margin-right');
+            if (ml === 'auto' && mr === 'auto') return { ok: true, reason: 'margin-left and margin-right are auto' };
+            var mlpx = pxValue(ml), mrpx = pxValue(mr);
+            if (typeof mlpx === 'number' && typeof mrpx === 'number') {
+                if (Math.abs(mlpx - mrpx) <= 2) return { ok: true, reason: 'symmetric margins (' + mlpx + 'px / ' + mrpx + 'px)' };
+            }
+*/
 
             return { ok: false, reason: 'no centering CSS found' };
         }
@@ -901,6 +914,334 @@ function runGradingTestRafting4(iframe, iframeDoc, results) {
         if (!foundExternal) {
             subResults.push('ℹ️ No external links found.');
         }
+        results.push(subResults);
+    })();
+
+    return results;
+}
+function runGradingTestRafting4(iframe, iframeDoc, results) {
+    // check for margin/padding rules in stylesheets
+    (function() {
+        var subResults = [];
+        var examples = new Map();
+        var styleSheets = Array.from(iframeDoc.styleSheets || []);
+
+        if (styleSheets.length === 0) {
+            subResults.push('ℹ️ No stylesheets found to inspect.');
+        } else {
+            for (const ss of styleSheets) {
+                try {
+                    var cssRules = ss.cssRules;
+                } catch (e) {
+                    // inaccessible stylesheet (CORS or other), skip
+                    continue;
+                }
+                for (const rule of Array.from(cssRules || [])) {
+                    try {
+                        if (rule.type !== CSSRule.STYLE_RULE || !rule.selectorText) continue;
+                        const selectors = rule.selectorText.split(',').map(s => s.trim());
+                        for (const sel of selectors) {
+                            // only consider selectors that target classes or ids
+                            if (!/[.#][A-Za-z0-9_-]/.test(sel)) continue;
+                            // check rule.style for margin/padding properties
+                            for (let i = 0; i < rule.style.length; i++) {
+                                const prop = rule.style[i];
+                                if (/^(margin|padding)(?:$|-)/i.test(prop)) {
+                                    const val = rule.style.getPropertyValue(prop).trim();
+                                    // consider property present if it has a non-empty value
+                                    if (val !== '') {
+                                        const key = sel + ' { ' + prop + ': ' + val + ' }';
+                                        if (!examples.has(key)) examples.set(key, key);
+                                    }
+                                }
+                            }
+                        }
+                    } catch (e) {
+                        // ignore individual rule parsing errors
+                    }
+                }
+            }
+
+            const found = Array.from(examples.values());
+            if (found.length >= 2) {
+                subResults.push('✅ Found at least 2 class/id-based selectors in attached stylesheets that set margin or padding.');
+                // show two representative examples (more available in verbose output)
+                subResults.push('Examples: ' + found.slice(0, 5).join(' ; '));
+            } else if (found.length === 1) {
+                subResults.push('❌ Only 1 class/id-based selector found that sets margin or padding (need at least 2).');
+                subResults.push('Example: ' + found[0]);
+            } else {
+                subResults.push('❌ No class/id-based selectors in attached stylesheets set a margin or padding property.');
+            }
+        }
+
+        results.push(subResults);
+    })();
+
+    // check for font-family usage in stylesheets and computed styles
+    (function() {
+        var subResults = [];
+
+        // helper to describe an element briefly
+        function describeElement(el) {
+            var desc = el.tagName.toLowerCase();
+            if (el.id) desc += '#' + el.id;
+            if (el.className) desc += '.' + (el.className.replace(/\s+/g, '.'));
+            var txt = (el.textContent || '').trim().replace(/\s+/g, ' ');
+            if (txt) desc += ' "' + txt.slice(0, 30) + (txt.length > 30 ? '…' : '') + '"';
+            return desc;
+        }
+
+        var genericKeywords = new Set(['serif', 'sans-serif', 'monospace', 'cursive', 'fantasy', 'system-ui', 'ui-serif', 'ui-sans-serif', 'ui-monospace']);
+
+        // Inspect computed font-family on elements
+        var elements = Array.from(iframeDoc.getElementsByTagName('*'));
+        var genericOnlyElements = [];
+        var singleFamilyElements = [];
+        var elementsWith3OrMore = 0;
+        for (const el of elements) {
+            try {
+                var ff = getStyle(el, 'font-family') || '';
+                if (!ff) continue;
+                var families = ff.split(',').map(s => s.trim().replace(/^['"]+|['"]+$/g, '')).filter(Boolean);
+                var lower = families.map(f => f.toLowerCase());
+                if (families.length >= 3) elementsWith3OrMore++;
+                if (families.length === 1) singleFamilyElements.push(describeElement(el) + ' (' + families[0] + ')');
+                if (families.length > 0 && lower.every(f => genericKeywords.has(f))) {
+                    genericOnlyElements.push(describeElement(el) + ' (' + ff + ')');
+                }
+            } catch (e) {
+                // ignore individual element errors
+            }
+        }
+
+        if (genericOnlyElements.length === 0) {
+            subResults.push('✅ No elements were detected using only generic/default font families (serif, sans-serif, etc.).');
+        } else {
+            subResults.push('❌ Some elements appear to be using only generic/default font families: ' + genericOnlyElements.slice(0,10).join(', ') +
+                            (genericOnlyElements.length > 10 ? ' (and ' + (genericOnlyElements.length - 10) + ' more)' : ''));
+        }
+
+        if (singleFamilyElements.length === 0) {
+            subResults.push('✅ No elements were found with a computed font-family that contains only a single family name (no fallbacks).');
+        } else {
+            subResults.push('❌ Elements with a single font-family (no fallbacks) detected: ' + singleFamilyElements.slice(0,10).join(', ') +
+                            (singleFamilyElements.length > 10 ? ' (and ' + (singleFamilyElements.length - 10) + ' more)' : ''));
+        }
+
+        // Inspect stylesheets for font-family declarations and whether they include at least 3 fonts
+        var fontRules = [];
+        var fontRulesWith3Plus = [];
+        var styleSheets = Array.from(iframeDoc.styleSheets || []);
+        for (const ss of styleSheets) {
+            try {
+                var cssRules = ss.cssRules;
+            } catch (e) {
+                continue; // inaccessible stylesheet
+            }
+            for (const rule of Array.from(cssRules || [])) {
+                try {
+                    if (rule.type === CSSRule.STYLE_RULE && rule.style && rule.style.fontFamily) {
+                        var raw = rule.style.fontFamily;
+                        var fams = raw.split(',').map(s => s.trim().replace(/^['"]+|['"]+$/g, '')).filter(Boolean);
+                        fontRules.push(rule.selectorText + ' { font-family: ' + raw + ' }');
+                        if (fams.length >= 3) {
+                            fontRulesWith3Plus.push(rule.selectorText + ' { font-family: ' + raw + ' }');
+                        }
+                    }
+                } catch (e) {
+                    // ignore per-rule parse problems
+                }
+            }
+        }
+
+        if (fontRulesWith3Plus.length > 0) {
+            subResults.push('✅ Found CSS font-family rule(s) that provide at least three fallback fonts: ' + fontRulesWith3Plus.slice(0,5).join(' ; '));
+        } else if (fontRules.length > 0) {
+            subResults.push('❌ No CSS font-family rules with 3 or more fonts were found. Example font-family rules found: ' + fontRules.slice(0,5).join(' ; '));
+        } else {
+            subResults.push('ℹ️ No CSS font-family declarations were found in accessible stylesheets.');
+        }
+
+        // Check the page-wide font usage (html/body)
+        try {
+            var rootFF = getStyle(iframeDoc.documentElement, 'font-family') || '';
+            var bodyFF = getStyle(iframeDoc.body, 'font-family') || '';
+            function ffIsGenericOnly(ff) {
+                if (!ff) return true;
+                var parts = ff.split(',').map(s=>s.trim().replace(/^['"]+|['"]+$/g,'')).filter(Boolean).map(s=>s.toLowerCase());
+                return parts.length === 0 || parts.every(p=>genericKeywords.has(p));
+            }
+            if (!ffIsGenericOnly(rootFF) || !ffIsGenericOnly(bodyFF)) {
+                subResults.push('✅ The page root/body have explicit font-family values (html: "' + rootFF + '", body: "' + bodyFF + '").');
+            } else {
+                subResults.push('❌ The page root/body appear to be using generic/default fonts (html: "' + rootFF + '", body: "' + bodyFF + '"). Consider setting a site-wide font-family with fallbacks (at least 3 fonts).');
+            }
+        } catch (e) {
+            subResults.push('ℹ️ Could not determine computed font-family for document root/body due to access errors.');
+        }
+
+        // Summary about prevalence of 3+ font-family usage among elements
+        if (elementsWith3OrMore > 0) {
+            subResults.push('✅ ' + elementsWith3OrMore + ' element(s) have a computed font-family that lists 3 or more families (examples shown above if any).');
+        } else {
+            subResults.push('❌ No individual elements were observed with a computed font-family listing 3 or more fonts.');
+        }
+
+        results.push(subResults);
+    })();
+
+    // check for card images and their styles
+    (function() {
+        var subResults = [];
+
+        function hasVisibleBackground(val) {
+            if (!val) return false;
+            val = val.trim().toLowerCase();
+            if (val === 'transparent' || val === 'inherit' || val === 'initial' || val === 'none') return false;
+            if (/^rgba\(\s*\d+,\s*\d+,\s*\d+,\s*0(?:\.0+)?\s*\)$/.test(val)) return false;
+            return true;
+        }
+
+        function hasVisibleBorder(el) {
+            var style = getStyle(el, 'border-style') || '';
+            var width = getStyle(el, 'border-width') || '';
+            var color = getStyle(el, 'border-color') || '';
+            style = style.toLowerCase();
+            width = width.toLowerCase();
+            if (!style || style === 'none' || style === 'hidden') return false;
+            if (/^0(?:px)?$/.test(width.trim())) return false;
+            // color could be transparent
+            if (!hasVisibleBackground(color) && !/^rgba\(.+,0(?:\.0+)?\)$/.test(color)) {
+                // If color appears transparent treat as no border color
+                // But if style/width present we'll still consider it a border unless color explicitly transparent
+            }
+            return true;
+        }
+
+        function normalizeColor(val) {
+            if (!val) return '';
+            try {
+                var h = rgbToHex(val);
+                if (h) return h.toString().toLowerCase();
+            } catch (e) {}
+            return String(val).trim().toLowerCase();
+        }
+
+        function findContainingBg(el) {
+            var node = el.parentElement;
+            while (node) {
+                var bg = getStyle(node, 'background-color');
+                if (hasVisibleBackground(bg)) return bg;
+                node = node.parentElement;
+            }
+            // fallback to document body computed background
+            return getStyle(iframeDoc.body, 'background-color') || '';
+        }
+
+        // 1) Check for three img.card-img inside section tags
+        try {
+            var cardImgs = Array.from(iframeDoc.querySelectorAll('section img.card-img'));
+            if (cardImgs.length === 3) {
+                subResults.push('✅ Found exactly 3 <img class="card-img"> elements inside <section> tags.');
+            } else {
+                subResults.push('❌ Expected 3 <img class="card-img"> elements inside <section>, found ' + cardImgs.length + '.');
+            }
+
+            if (cardImgs.length > 0) {
+                var imgsMissingBorder = [];
+                var imgsWrongBoxSizing = [];
+                for (var i = 0; i < cardImgs.length; i++) {
+                    var im = cardImgs[i];
+                    try {
+                        if (!hasVisibleBorder(im)) imgsMissingBorder.push(describeElementForReport(im));
+                        var box = (getStyle(im, 'box-sizing') || '').toLowerCase();
+                        if (box !== 'border-box') imgsWrongBoxSizing.push((describeElementForReport(im) + ' (box-sizing: ' + (box || 'default') + ')'));
+                    } catch (e) {
+                        // ignore element-specific errors
+                    }
+                }
+                if (imgsMissingBorder.length === 0) {
+                    subResults.push('✅ All card images have a visible border.');
+                } else {
+                    subResults.push('❌ The following card images do not have a visible border: ' + imgsMissingBorder.slice(0,10).join(', ') + (imgsMissingBorder.length > 10 ? ' (and more)' : ''));
+                }
+                if (imgsWrongBoxSizing.length === 0) {
+                    subResults.push('✅ All card images use box-sizing: border-box.');
+                } else {
+                    subResults.push('❌ The following card images are missing box-sizing: border-box: ' + imgsWrongBoxSizing.slice(0,10).join(', ') + (imgsWrongBoxSizing.length > 10 ? ' (and more)' : ''));
+                }
+            }
+        } catch (e) {
+            subResults.push('ℹ️ Could not evaluate card images due to an error.');
+        }
+
+        // helper used above (kept local to avoid name collisions)
+        function describeElementForReport(el) {
+            try {
+                var desc = el.tagName.toLowerCase();
+                if (el.id) desc += '#' + el.id;
+                if (el.className) desc += '.' + (el.className.replace(/\s+/g, '.'));
+                var txt = (el.alt || el.getAttribute('alt') || el.getAttribute('title') || el.textContent || '').toString().trim().replace(/\s+/g,' ');
+                if (txt) desc += ' "' + txt.slice(0,30) + (txt.length > 30 ? '…' : '') + '"';
+                return desc;
+            } catch (e) {
+                return el.tagName ? el.tagName.toLowerCase() : 'element';
+            }
+        }
+
+        // 2) Look for two button-like links: <a class="join"> and <a class="book">
+        try {
+            var joinLink = iframeDoc.querySelector('a.join');
+            var bookLink = iframeDoc.querySelector('a.book');
+
+            if (joinLink) {
+                subResults.push('✅ Found <a class="join"> link.');
+            } else {
+                subResults.push('❌ Missing <a class="join"> link.');
+            }
+            if (bookLink) {
+                subResults.push('✅ Found <a class="book"> link.');
+            } else {
+                subResults.push('❌ Missing <a class="book"> link.');
+            }
+
+            function checkButtonLike(aEl, name) {
+                if (!aEl) return;
+                var br = getStyle(aEl, 'border-radius') || '';
+                var brNorm = br.trim().toLowerCase();
+                var nonZero = !(brNorm === '' || brNorm === '0' || brNorm === '0px' || brNorm === 'none' || brNorm === '0%');
+                if (nonZero) {
+                    subResults.push('✅ ' + name + ' has non-zero border-radius (' + br + ').');
+                } else {
+                    subResults.push('❌ ' + name + ' border-radius is zero or not set (' + (br || 'not set') + ').');
+                }
+
+                var btnBg = getStyle(aEl, 'background-color') || '';
+                var containerBg = findContainingBg(aEl) || '';
+                var nBtn = normalizeColor(btnBg);
+                var nCont = normalizeColor(containerBg);
+
+                if (!hasVisibleBackground(btnBg)) {
+                    subResults.push('❌ ' + name + ' does not have a visible background-color (computed: ' + (btnBg || 'none') + ').');
+                } else if (!hasVisibleBackground(containerBg)) {
+                    // If container has no visible background, consider this a pass for "not matching" but report info
+                    subResults.push('ℹ️ ' + name + ' has a visible background (' + btnBg + '), but container has no visible background to compare.');
+                } else if (nBtn && nCont && nBtn !== nCont) {
+                    subResults.push('✅ ' + name + ' background (' + btnBg + ') does not match its containing element background (' + containerBg + ').');
+                } else if (nBtn === nCont) {
+                    subResults.push('❌ ' + name + ' background (' + btnBg + ') matches its containing element background (' + containerBg + ').');
+                } else {
+                    subResults.push('ℹ️ Could not reliably compare ' + name + ' background to its container (computed values: ' + btnBg + ' / ' + containerBg + ').');
+                }
+            }
+
+            checkButtonLike(joinLink, '<a class="join">');
+            checkButtonLike(bookLink, '<a class="book">');
+        } catch (e) {
+            subResults.push('ℹ️ Could not evaluate button-like links due to an error.');
+        }
+
         results.push(subResults);
     })();
 
