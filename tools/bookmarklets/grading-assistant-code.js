@@ -350,12 +350,12 @@ function runGradingTest(activity, number) {
     }
     // open a popup and show results as an unordered list
     var html = '<html><head><title>Grading Results</title></head><body><h2>Results for ' + escapeHtml(activity) + ' #' + number + '</h2>';
-    html += '<p>' + escapeHtml(window.location) + '</p>';
+    html += '<p><a href="' + escapeHtml(window.location) + '">' + escapeHtml(window.location) + '</a></p>';
     if (results.length > 0) {
         (function () {
             function renderItem(item) {
                 if (Array.isArray(item)) {
-                    return '<li>Sub-items: <ul>' + item.map(renderItem).join('') + '</ul></li>';
+                    return '<li>Results: <ul>' + item.map(renderItem).join('') + '</ul></li>';
                 }
                 return '<li>' + escapeHtml(item) + '</li>';
             }
