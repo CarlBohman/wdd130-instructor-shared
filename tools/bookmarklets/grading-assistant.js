@@ -4,7 +4,7 @@ javascript:
     var baseSrc = 'https://carlbohman.github.io/wdd130-instructor-shared/tools/bookmarklets/grading-assistant-code.js';
 
     /* cache TTL in milliseconds (e.g. 24 hours). Set to 0 to always bypass cache. */
-    var CACHE_TTL = 0 * 60 * 1000;/* 24 * 60 * 60 * 1000; */
+    var CACHE_TTL = 60 * 60 * 1000;/* 24 * 60 * 60 * 1000; */
 
     /* storage key used to track last fetch time */
     var STORAGE_KEY = 'gradingAssistantLastFetch';

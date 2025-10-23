@@ -1,8 +1,53 @@
 function addJquery() {
-    if (typeof jQuery == 'undefined') {
-        var script_jQuery = document.createElement('script');
-        script_jQuery.src = 'https://code.jquery.com/jquery-latest.min.js';
-        document.head.appendChild(script_jQuery);
+    if (typeof jQuery !== 'undefined') return;
+
+    var STORAGE_KEY = 'grading_jquery_cache_v1';
+    var ONE_HOUR = 60 * 60 * 1000;
+    var CDN = 'https://code.jquery.com/jquery-latest.min.js';
+
+    // try to use cached copy from localStorage if fresher than 1 hour
+    try {
+        var cached = localStorage.getItem(STORAGE_KEY);
+        if (cached) {
+            var obj = JSON.parse(cached);
+            if (obj && obj.ts && (Date.now() - obj.ts) < ONE_HOUR && obj.code) {
+                var inline = document.createElement('script');
+                inline.type = 'text/javascript';
+                inline.text = obj.code;
+                document.head.appendChild(inline);
+                return;
+            }
+        }
+    } catch (e) {
+        // storage access or parse error — fall through to network fetch
+    }
+
+    // fallback: add script tag that will use browser cache if available,
+    // and also fetch the file to update our localStorage cache in background
+    var scriptTag = document.createElement('script');
+    scriptTag.src = CDN;
+    scriptTag.async = false;
+    document.head.appendChild(scriptTag);
+
+    // fetch and cache the response for future loads (best-effort)
+    try {
+        fetch(CDN, { mode: 'cors', cache: 'reload' })
+            .then(function (resp) {
+                if (!resp.ok) throw new Error('Network response not ok');
+                return resp.text();
+            })
+            .then(function (code) {
+                try {
+                    localStorage.setItem(STORAGE_KEY, JSON.stringify({ ts: Date.now(), code: code }));
+                } catch (e) {
+                    // ignore quota or storage errors
+                }
+            })
+            .catch(function () {
+                /* ignore fetch/cache errors */
+            });
+    } catch (e) {
+        // fetch not available — nothing else to do
     }
 }
 function escapeHtml(s) {
