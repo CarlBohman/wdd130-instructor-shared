@@ -121,35 +121,54 @@ function createIframe() {
         doc.open();
         doc.write(content);
         doc.close();
-        for (const element of document.head.getElementsByTagName('*'))
-        {
+        for (const element of document.head.getElementsByTagName('*')) {
             if (element.tagName.toLowerCase() != 'title')
                 element.parentNode.removeChild(element);
         }
-        // wait (synchronously) up to 5s for the iframe's document to be available/loaded
+        iframe = top.document.body.getElementsByTagName('iframe')[0];
+        if (iframe == null) {
+            alert("Iframe not found");
+            return;
+        }
+        // wait (up to 5s) for the iframe's document to be available/loaded,
+        // prefer the iframe 'load' event but also check readyState as a fallback
         try {
             var _start = Date.now();
             var _timeout = 5000; // ms
+            var _loaded = false;
+            function _onIframeLoad() { _loaded = true; try { iframe.contentWindow.removeEventListener('load', _onIframeLoad); } catch (e) { } }
+            try {
+                if (iframe && iframe.contentWindow) {
+                    iframe.contentWindow.addEventListener('load', _onIframeLoad);
+                }
+            } catch (e) {
+                // ignore (possible cross-origin access)
+            }
             while (true) {
-                iframe = top.document.body.getElementsByTagName('iframe')[0];
-                if (iframe == null) {
-                    alert("Iframe not found");
-                    return;
+                try {
+                    if (iframe && iframe.contentWindow && iframe.contentWindow.document) {
+                        var _doc = iframe.contentWindow.document;
+                        if (_doc.readyState === 'complete' || _doc.body) { _loaded = true; }
+                    }
+                } catch (e) {
+                    // ignore access errors
                 }
-                if (iframe && iframe.contentWindow && iframe.contentWindow.document) {
-                    var _doc = iframe.contentWindow.document;
-                    if (_doc.readyState === 'complete' || _doc.body) break;
-                }
+                if (_loaded) break;
                 if (Date.now() - _start > _timeout) break;
             }
+            try { iframe.contentWindow.removeEventListener('load', _onIframeLoad); } catch (e) { }
         } catch (e) {
             // ignore and continue if access throws
         }
-        for (const element of iframe.contentWindow.document.body.getElementsByTagName('a'))
-        {
-            if (element.getAttribute('target') == null) element.setAttribute('target', '_top');
+        // Ensure body exists before trying to access it
+        if (!iframe.contentWindow.document.body) {
+            console.warn("Iframe body not available yet, skipping link target modifications");
+        } else {
+            for (const element of iframe.contentWindow.document.body.getElementsByTagName('a')) {
+                if (element.getAttribute('target') == null) element.setAttribute('target', '_top');
+            }
+            iframe.contentWindow.document.body.focus();
         }
-        iframe.contentWindow.document.body.focus();
         cf = document.createElement("div");
         cf.id = "colors_and_fonts";
         document.body.insertBefore(cf, document.body.firstChild);
@@ -316,7 +335,7 @@ function runGradingTest(activity, number) {
     var iframe = document.getElementById("originalFrame");
     var iframeDoc = iframe.contentWindow.document;
     var results = [];
-    
+
     if (activity == 'Rafting') {
         if (number == 4) {
             runGradingTestRafting4(iframe, iframeDoc, results);
@@ -331,13 +350,14 @@ function runGradingTest(activity, number) {
     }
     // open a popup and show results as an unordered list
     var html = '<html><head><title>Grading Results</title></head><body><h2>Results for ' + escapeHtml(activity) + ' #' + number + '</h2>';
+    html += '<p>' + escapeHtml(window.location) + '</p>';
     if (results.length > 0) {
-        (function() {
+        (function () {
             function renderItem(item) {
-            if (Array.isArray(item)) {
-                return '<li>Sub-items: <ul>' + item.map(renderItem).join('') + '</ul></li>';
-            }
-            return '<li>' + escapeHtml(item) + '</li>';
+                if (Array.isArray(item)) {
+                    return '<li>Sub-items: <ul>' + item.map(renderItem).join('') + '</ul></li>';
+                }
+                return '<li>' + escapeHtml(item) + '</li>';
             }
             html += '<ol>' + results.map(renderItem).join('') + '</ol>';
         })();
@@ -361,7 +381,7 @@ function runGradingAssistant() {
 }
 function runGradingTestRafting4(iframe, iframeDoc, results) {
     // check for <style> tags inside the iframe
-    (function() {
+    (function () {
         var subResults = [];
         var styleTags = iframeDoc.getElementsByTagName('style');
         if (styleTags.length > 0) {
@@ -369,7 +389,7 @@ function runGradingTestRafting4(iframe, iframeDoc, results) {
         }
 
         // check for at least one external stylesheet that is actually accessible
-        var linkElems = Array.from(iframeDoc.getElementsByTagName('link')).filter(function(l){
+        var linkElems = Array.from(iframeDoc.getElementsByTagName('link')).filter(function (l) {
             return (l.rel || '').toLowerCase().indexOf('stylesheet') !== -1 && /^https?:\/\//i.test(l.href || '');
         });
 
@@ -398,7 +418,7 @@ function runGradingTestRafting4(iframe, iframeDoc, results) {
     })();
 
     // check for a single wrapper div around body
-    (function() {
+    (function () {
         var subResults = [];
         var bodyChildren = Array.from(iframeDoc.body.children);
         if (bodyChildren.length === 1 && bodyChildren[0].tagName.toLowerCase() === 'div') {
@@ -442,7 +462,7 @@ function runGradingTestRafting4(iframe, iframeDoc, results) {
     })();
 
     // check centering for nav links, headlines, buttons, and sections
-    (function() {
+    (function () {
         var subResults = [];
         function describe(el) {
             var desc = el.tagName.toLowerCase();
@@ -479,16 +499,16 @@ function runGradingTestRafting4(iframe, iframeDoc, results) {
                 }
             }
 
-/*
-            // check margins auto or symmetric margins
-            var ml = getStyle(el, 'margin-left');
-            var mr = getStyle(el, 'margin-right');
-            if (ml === 'auto' && mr === 'auto') return { ok: true, reason: 'margin-left and margin-right are auto' };
-            var mlpx = pxValue(ml), mrpx = pxValue(mr);
-            if (typeof mlpx === 'number' && typeof mrpx === 'number') {
-                if (Math.abs(mlpx - mrpx) <= 2) return { ok: true, reason: 'symmetric margins (' + mlpx + 'px / ' + mrpx + 'px)' };
-            }
-*/
+            /*
+                        // check margins auto or symmetric margins
+                        var ml = getStyle(el, 'margin-left');
+                        var mr = getStyle(el, 'margin-right');
+                        if (ml === 'auto' && mr === 'auto') return { ok: true, reason: 'margin-left and margin-right are auto' };
+                        var mlpx = pxValue(ml), mrpx = pxValue(mr);
+                        if (typeof mlpx === 'number' && typeof mrpx === 'number') {
+                            if (Math.abs(mlpx - mrpx) <= 2) return { ok: true, reason: 'symmetric margins (' + mlpx + 'px / ' + mrpx + 'px)' };
+                        }
+            */
 
             return { ok: false, reason: 'no centering CSS found' };
         }
@@ -512,7 +532,7 @@ function runGradingTestRafting4(iframe, iframeDoc, results) {
             if (notCentered.length === 0) {
                 subResults.push('✅ All ' + label + ' are centered.');
             } else {
-                subResults.push('❌ The following ' + label + ' are NOT centered: ' + notCentered.slice(0,10).join(', ') +
+                subResults.push('❌ The following ' + label + ' are NOT centered: ' + notCentered.slice(0, 10).join(', ') +
                     (notCentered.length > 10 ? ' (and ' + (notCentered.length - 10) + ' more)' : ''));
             }
         }
@@ -554,7 +574,7 @@ function runGradingTestRafting4(iframe, iframeDoc, results) {
     })();
 
     // check for element with id="background" and verify it has a CSS height
-    (function() {
+    (function () {
         var subResults = [];
         const background = iframeDoc.getElementById('background');
         if (background) {
@@ -574,7 +594,7 @@ function runGradingTestRafting4(iframe, iframeDoc, results) {
     })();
 
     // check background colors for body, header, nav:hover, buttons, divs, and footer
-    (function() {
+    (function () {
         var subResults = [];
         function hasVisibleBackground(val) {
             if (!val) return false;
@@ -624,7 +644,7 @@ function runGradingTestRafting4(iframe, iframeDoc, results) {
         }
 
         // nav:hover — check style rules for any nav:hover selector in accessible stylesheets
-        (function() {
+        (function () {
             var foundHoverRule = false;
             var styleSheets = Array.from(iframeDoc.styleSheets || []);
             for (const ss of styleSheets) {
@@ -652,7 +672,7 @@ function runGradingTestRafting4(iframe, iframeDoc, results) {
         })();
 
         // buttons
-        (function() {
+        (function () {
             var btns = [];
             var bEls = iframeDoc.getElementsByTagName('button');
             for (var b = 0; b < bEls.length; b++) btns.push(bEls[b]);
@@ -675,13 +695,13 @@ function runGradingTestRafting4(iframe, iframeDoc, results) {
                 if (missing.length === 0) {
                     subResults.push('✅ All buttons have a visible background-color.');
                 } else {
-                    subResults.push('❌ The following buttons are missing a visible background-color: ' + missing.slice(0,10).join(', ') + (missing.length > 10 ? ' (and ' + (missing.length - 10) + ' more)' : ''));
+                    subResults.push('❌ The following buttons are missing a visible background-color: ' + missing.slice(0, 10).join(', ') + (missing.length > 10 ? ' (and ' + (missing.length - 10) + ' more)' : ''));
                 }
             }
         })();
 
         // divs — require at least one prominent div with background or report how many lack one
-        (function() {
+        (function () {
             var divs = Array.from(iframeDoc.getElementsByTagName('div'));
             if (divs.length === 0) {
                 subResults.push('ℹ️ No <div> elements found.');
@@ -703,7 +723,7 @@ function runGradingTestRafting4(iframe, iframeDoc, results) {
     })();
 
     // check foreground colors for links, headlines, buttons, and paragraphs
-    (function() {
+    (function () {
         var subResults = [];
         function hasVisibleForeground(val) {
             if (!val) return false;
@@ -740,7 +760,7 @@ function runGradingTestRafting4(iframe, iframeDoc, results) {
             if (missing.length === 0) {
                 subResults.push('✅ All ' + label + ' have a visible foreground color.');
             } else {
-                subResults.push('❌ The following ' + label + ' are missing a visible foreground color: ' + missing.slice(0,10).join(', ') +
+                subResults.push('❌ The following ' + label + ' are missing a visible foreground color: ' + missing.slice(0, 10).join(', ') +
                     (missing.length > 10 ? ' (and ' + (missing.length - 10) + ' more)' : ''));
             }
         }
@@ -776,7 +796,7 @@ function runGradingTestRafting4(iframe, iframeDoc, results) {
     })();
 
     // check CSS rules and computed styles for .icon and .logo width:80px
-    (function(){
+    (function () {
         var subResults = [];
         function classHasRuleWidth(className) {
             var foundRule = false;
@@ -870,7 +890,7 @@ function runGradingTestRafting4(iframe, iframeDoc, results) {
     })();
 
     // check that all <a> elements have underlines removed
-    (function(){
+    (function () {
         var subResults = [];
         var anchors = Array.from(iframeDoc.getElementsByTagName('a'));
         if (anchors.length === 0) {
@@ -893,21 +913,21 @@ function runGradingTestRafting4(iframe, iframeDoc, results) {
                 var desc = a.tagName.toLowerCase();
                 if (a.id) desc += '#' + a.id;
                 if (a.className) desc += '.' + a.className.replace(/\s+/g, '.');
-                var txt = (a.textContent || '').trim().replace(/\s+/g,' ');
-                if (txt) desc += ' "' + txt.slice(0,30) + (txt.length > 30 ? '…' : '') + '"';
+                var txt = (a.textContent || '').trim().replace(/\s+/g, ' ');
+                if (txt) desc += ' "' + txt.slice(0, 30) + (txt.length > 30 ? '…' : '') + '"';
                 underlined.push(desc);
             }
         }
         if (underlined.length === 0) {
             subResults.push('✅ All <a> elements have the default underline removed.');
         } else {
-            subResults.push('❌ The following <a> elements still have an underline: ' + underlined.slice(0,10).join(', ') + (underlined.length > 10 ? ' (and ' + (underlined.length - 10) + ' more)' : ''));
+            subResults.push('❌ The following <a> elements still have an underline: ' + underlined.slice(0, 10).join(', ') + (underlined.length > 10 ? ' (and ' + (underlined.length - 10) + ' more)' : ''));
         }
         results.push(subResults);
     })();
 
     // check that all external links have target="_blank"
-    (function() {
+    (function () {
         var subResults = [];
         var links = iframeDoc.getElementsByTagName('a');
         var foundExternal = false;
@@ -940,7 +960,7 @@ function runGradingTestRafting4(iframe, iframeDoc, results) {
 }
 function runGradingTestRafting5(iframe, iframeDoc, results) {
     // check for margin/padding rules in stylesheets
-    (function() {
+    (function () {
         var subResults = [];
         var examples = new Map();
         var styleSheets = Array.from(iframeDoc.styleSheets || []);
@@ -998,7 +1018,7 @@ function runGradingTestRafting5(iframe, iframeDoc, results) {
     })();
 
     // check for font-family usage in stylesheets and computed styles
-    (function() {
+    (function () {
         var subResults = [];
 
         // helper to describe an element briefly
@@ -1037,15 +1057,15 @@ function runGradingTestRafting5(iframe, iframeDoc, results) {
         if (genericOnlyElements.length === 0) {
             subResults.push('✅ No elements were detected using only generic/default font families (serif, sans-serif, etc.).');
         } else {
-            subResults.push('❌ Some elements appear to be using only generic/default font families: ' + genericOnlyElements.slice(0,10).join(', ') +
-                            (genericOnlyElements.length > 10 ? ' (and ' + (genericOnlyElements.length - 10) + ' more)' : ''));
+            subResults.push('❌ Some elements appear to be using only generic/default font families: ' + genericOnlyElements.slice(0, 10).join(', ') +
+                (genericOnlyElements.length > 10 ? ' (and ' + (genericOnlyElements.length - 10) + ' more)' : ''));
         }
 
         if (singleFamilyElements.length === 0) {
             subResults.push('✅ No elements were found with a computed font-family that contains only a single family name (no fallbacks).');
         } else {
-            subResults.push('❌ Elements with a single font-family (no fallbacks) detected: ' + singleFamilyElements.slice(0,10).join(', ') +
-                            (singleFamilyElements.length > 10 ? ' (and ' + (singleFamilyElements.length - 10) + ' more)' : ''));
+            subResults.push('❌ Elements with a single font-family (no fallbacks) detected: ' + singleFamilyElements.slice(0, 10).join(', ') +
+                (singleFamilyElements.length > 10 ? ' (and ' + (singleFamilyElements.length - 10) + ' more)' : ''));
         }
 
         // Inspect stylesheets for font-family declarations and whether they include at least 3 fonts
@@ -1075,9 +1095,9 @@ function runGradingTestRafting5(iframe, iframeDoc, results) {
         }
 
         if (fontRulesWith3Plus.length > 0) {
-            subResults.push('✅ Found CSS font-family rule(s) that provide at least three fallback fonts: ' + fontRulesWith3Plus.slice(0,5).join(' ; '));
+            subResults.push('✅ Found CSS font-family rule(s) that provide at least three fallback fonts: ' + fontRulesWith3Plus.slice(0, 5).join(' ; '));
         } else if (fontRules.length > 0) {
-            subResults.push('❌ No CSS font-family rules with 3 or more fonts were found. Example font-family rules found: ' + fontRules.slice(0,5).join(' ; '));
+            subResults.push('❌ No CSS font-family rules with 3 or more fonts were found. Example font-family rules found: ' + fontRules.slice(0, 5).join(' ; '));
         } else {
             subResults.push('ℹ️ No CSS font-family declarations were found in accessible stylesheets.');
         }
@@ -1088,8 +1108,8 @@ function runGradingTestRafting5(iframe, iframeDoc, results) {
             var bodyFF = getStyle(iframeDoc.body, 'font-family') || '';
             function ffIsGenericOnly(ff) {
                 if (!ff) return true;
-                var parts = ff.split(',').map(s=>s.trim().replace(/^['"]+|['"]+$/g,'')).filter(Boolean).map(s=>s.toLowerCase());
-                return parts.length === 0 || parts.every(p=>genericKeywords.has(p));
+                var parts = ff.split(',').map(s => s.trim().replace(/^['"]+|['"]+$/g, '')).filter(Boolean).map(s => s.toLowerCase());
+                return parts.length === 0 || parts.every(p => genericKeywords.has(p));
             }
             if (!ffIsGenericOnly(rootFF) || !ffIsGenericOnly(bodyFF)) {
                 subResults.push('✅ The page root/body have explicit font-family values (html: "' + rootFF + '", body: "' + bodyFF + '").');
@@ -1111,7 +1131,7 @@ function runGradingTestRafting5(iframe, iframeDoc, results) {
     })();
 
     // check for card images and their styles
-    (function() {
+    (function () {
         var subResults = [];
 
         function hasVisibleBackground(val) {
@@ -1143,7 +1163,7 @@ function runGradingTestRafting5(iframe, iframeDoc, results) {
             try {
                 var h = rgbToHex(val);
                 if (h) return h.toString().toLowerCase();
-            } catch (e) {}
+            } catch (e) { }
             return String(val).trim().toLowerCase();
         }
 
@@ -1183,12 +1203,12 @@ function runGradingTestRafting5(iframe, iframeDoc, results) {
                 if (imgsMissingBorder.length === 0) {
                     subResults.push('✅ All card images have a visible border.');
                 } else {
-                    subResults.push('❌ The following card images do not have a visible border: ' + imgsMissingBorder.slice(0,10).join(', ') + (imgsMissingBorder.length > 10 ? ' (and more)' : ''));
+                    subResults.push('❌ The following card images do not have a visible border: ' + imgsMissingBorder.slice(0, 10).join(', ') + (imgsMissingBorder.length > 10 ? ' (and more)' : ''));
                 }
                 if (imgsWrongBoxSizing.length === 0) {
                     subResults.push('✅ All card images use box-sizing: border-box.');
                 } else {
-                    subResults.push('❌ The following card images are missing box-sizing: border-box: ' + imgsWrongBoxSizing.slice(0,10).join(', ') + (imgsWrongBoxSizing.length > 10 ? ' (and more)' : ''));
+                    subResults.push('❌ The following card images are missing box-sizing: border-box: ' + imgsWrongBoxSizing.slice(0, 10).join(', ') + (imgsWrongBoxSizing.length > 10 ? ' (and more)' : ''));
                 }
             }
         } catch (e) {
@@ -1201,8 +1221,8 @@ function runGradingTestRafting5(iframe, iframeDoc, results) {
                 var desc = el.tagName.toLowerCase();
                 if (el.id) desc += '#' + el.id;
                 if (el.className) desc += '.' + (el.className.replace(/\s+/g, '.'));
-                var txt = (el.alt || el.getAttribute('alt') || el.getAttribute('title') || el.textContent || '').toString().trim().replace(/\s+/g,' ');
-                if (txt) desc += ' "' + txt.slice(0,30) + (txt.length > 30 ? '…' : '') + '"';
+                var txt = (el.alt || el.getAttribute('alt') || el.getAttribute('title') || el.textContent || '').toString().trim().replace(/\s+/g, ' ');
+                if (txt) desc += ' "' + txt.slice(0, 30) + (txt.length > 30 ? '…' : '') + '"';
                 return desc;
             } catch (e) {
                 return el.tagName ? el.tagName.toLowerCase() : 'element';
