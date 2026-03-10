@@ -4,12 +4,30 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Randomize Final Assignment</title>
+    <link rel="stylesheet" href="../../styles/styles.css">
     <link rel="stylesheet" href="styles.css">
-    <script src="script.js"></script>
 </head>
 <body>
-    <script>
-        createFinalAssignmentForm();
-    </script>
+    <main class="page-card">
+        <nav class="back-link"><a href="../index.html">Tools</a></nav>
+        <h1>Randomize Final Assignment</h1>
+        <section>
+            <form id="assignmentForm">
+                <p>Enter one role and one student per line.</p>
+                <label for="projectRoles">Project Roles</label>
+                <textarea id="projectRoles" name="projectRoles" rows="6" required
+                    placeholder="Client&#10;Lead Developer&#10;Junior Developer 1&#10;Junior Developer 2">Client
+Lead Developer
+Junior Developer 1
+Junior Developer 2</textarea>
+                <label for="studentNames">Student Names</label>
+                <textarea id="studentNames" name="studentNames" rows="10" required
+                    placeholder="Jane Doe&#10;John Smith&#10;..."></textarea>
+                <button type="submit">Assign Roles</button>
+            </form>
+            <div id="assignmentResults"></div>
+        </section>
+    </main>
+    <script src="script.js"></script>
 </body>
 </html>

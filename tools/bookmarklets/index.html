@@ -5,86 +5,83 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Bookmarklet help</title>
-    <style>
-        table,
-        th,
-        td {
-            border: 1px black solid;
-        }
-    </style>
+    <link rel="stylesheet" href="../../styles/styles.css">
 </head>
 
 <body>
-    <h1>Bookmarklets</h1>
-    <h2>What are bookmarklets</h2>
-    <p>Bookmarklets are snippets of JavaScript code that can be used to execute code in the context of the current web
-        page.</p>
-    <h2>How to install</h2>
-    <ol>
-        <li>Select the entire content of the bookmarklet code (including the "javascript:" line).</li>
-        <li>Create a new bookmark in your browser (ideally in the bookmark bar, but it works from anywhere in the
-            browser bookmarks).</li>
-        <li>Edit the bookmarklet and make sure that it is completely empty.</li>
-        <li>Paste the bookmarklet code into the bookmark and save it.</li>
-    </ol>
-    <h2>How to use</h2>
-    <ol>
-        <li>Navigate to the page that you want the code to run on.</li>
-        <li>Select or click on the bookmarklet.</li>
-    </ol>
-    <h2>Table of bookmarklets</h2>
-    <table>
-        <tr>
-            <th>Name</th>
-            <th>Where to use</th>
-            <th>What it does</th>
-        </tr>
-        <tr>
-            <td><a href="apply-week7-css.js">apply-week7-css.js</a></td>
-            <td><p>Viewing the index.html file for the rafting project.</p></td>
-            <td><p>Applies the CSS for week 7 to the page.  This may expose some issues with the existing HTML or CSS code.</p></td>
-        </tr>
-        <tr>
-            <td><a href="goto-github-page.js">goto-github-page.js</a></td>
-            <td><p>Viewing an HTML file in a GitHub repository.</p></td>
-            <td><p>Redirects user to the same HTML document as it should exist in GitHub Pages. If the page results in an
-                error, GitHub Pages may not be set up or there may be an issue with the deployment on GitHub.com.</p></td>
-        </tr>
-        <tr>
-            <td><a href="goto-github-repo.js">goto-github-repo.js</a></td>
-            <td><p>Viewing a web page hosted by GitHub Pages.</p></td>
-            <td><p>Redirects user to the repository that is configured with GitHub Pages.</p></td>
-        </tr>
-        <tr>
-            <td><a href="goto-speed-grader.js">goto-speed-grader.js</a></td>
-            <td><p>Viewing a "Submission Details" page on Canvas. This is commonly reached by clicking on a link in an
-                email notification from Canvas (that might be something like "Click here to review the submission").</p>
-            </td>
-            <td><p>Redirects user to the Speed Grader page for that specific assignment for that student.</p></td>
-        </tr>
-        <tr>
-            <td><a href="grading-assistant.js">grading-assistant.js</a></td>
-            <td><p>Viewing any web page (especially one of the project pages for WDD 130).</p></td>
-            <td>
-                <p>Creates a block on information at the top of the page. The information includes colors, fonts, links,
-                    etc.</p>
-                <p>NOTE:<br>While this bookmarklet tries to ensure that it always displays consistently, some CSS, HTML,
-                    JavaScript, etc. that is part of a page can cause it to have some issues. In particular, floating
-                    headers can overlap the block. To work around these kinds of issues, set the header (or other piece
-                    of HTML) to be hidden ("visibility: none;") using the inpsect tool or do other tweaks as needed.</p>
-            </td>
-        </tr>
-        <tr>
-            <td><a href="w3c-css-validator.js">w3c-css-validator.js</a></td>
-            <td><p>Viewing any web page.</p></td>
-            <td><p>Redirects user to the CSS validator for that page.</p></td>
-        </tr>
-        <tr>
-            <td><a href="w3c-html-validator.js">w3c-html-validator.js</a></td>
-            <td><p>Viewing any web page.</p></td>
-            <td><p>Redirects user to the HTML validator for that page.</p></td>
-        </tr>
-    </table>
+    <main class="page-card">
+        <nav class="back-link"><a href="../index.html">Tools</a></nav>
+        <h1>Bookmarklets</h1>
+        <h2>What are bookmarklets</h2>
+        <p>Bookmarklets are snippets of JavaScript code that can be used to execute code in the context of the current web
+            page.</p>
+        <h2>How to install</h2>
+        <ol>
+            <li>Select the entire content of the bookmarklet code (including the "javascript:" line).</li>
+            <li>Create a new bookmark in your browser (ideally in the bookmark bar, but it works from anywhere in the
+                browser bookmarks).</li>
+            <li>Edit the bookmarklet and make sure that it is completely empty.</li>
+            <li>Paste the bookmarklet code into the bookmark and save it.</li>
+        </ol>
+        <h2>How to use</h2>
+        <ol>
+            <li>Navigate to the page that you want the code to run on.</li>
+            <li>Select or click on the bookmarklet.</li>
+        </ol>
+        <h2>Table of bookmarklets</h2>
+        <table>
+            <tr>
+                <th>Name</th>
+                <th>Where to use</th>
+                <th>What it does</th>
+            </tr>
+            <tr>
+                <td><a href="apply-week7-css.js">apply-week7-css.js</a></td>
+                <td><p>Viewing the index.html file for the rafting project.</p></td>
+                <td><p>Applies the CSS for week 7 to the page.  This may expose some issues with the existing HTML or CSS code.</p></td>
+            </tr>
+            <tr>
+                <td><a href="goto-github-page.js">goto-github-page.js</a></td>
+                <td><p>Viewing an HTML file in a GitHub repository.</p></td>
+                <td><p>Redirects user to the same HTML document as it should exist in GitHub Pages. If the page results in an
+                    error, GitHub Pages may not be set up or there may be an issue with the deployment on GitHub.com.</p></td>
+            </tr>
+            <tr>
+                <td><a href="goto-github-repo.js">goto-github-repo.js</a></td>
+                <td><p>Viewing a web page hosted by GitHub Pages.</p></td>
+                <td><p>Redirects user to the repository that is configured with GitHub Pages.</p></td>
+            </tr>
+            <tr>
+                <td><a href="goto-speed-grader.js">goto-speed-grader.js</a></td>
+                <td><p>Viewing a "Submission Details" page on Canvas. This is commonly reached by clicking on a link in an
+                    email notification from Canvas (that might be something like "Click here to review the submission").</p>
+                </td>
+                <td><p>Redirects user to the Speed Grader page for that specific assignment for that student.</p></td>
+            </tr>
+            <tr>
+                <td><a href="grading-assistant.js">grading-assistant.js</a></td>
+                <td><p>Viewing any web page (especially one of the project pages for WDD 130).</p></td>
+                <td>
+                    <p>Creates a block on information at the top of the page. The information includes colors, fonts, links,
+                        etc.</p>
+                    <p>NOTE:<br>While this bookmarklet tries to ensure that it always displays consistently, some CSS, HTML,
+                        JavaScript, etc. that is part of a page can cause it to have some issues. In particular, floating
+                        headers can overlap the block. To work around these kinds of issues, set the header (or other piece
+                        of HTML) to be hidden ("visibility: none;") using the inpsect tool or do other tweaks as needed.</p>
+                </td>
+            </tr>
+            <tr>
+                <td><a href="w3c-css-validator.js">w3c-css-validator.js</a></td>
+                <td><p>Viewing any web page.</p></td>
+                <td><p>Redirects user to the CSS validator for that page.</p></td>
+            </tr>
+            <tr>
+                <td><a href="w3c-html-validator.js">w3c-html-validator.js</a></td>
+                <td><p>Viewing any web page.</p></td>
+                <td><p>Redirects user to the HTML validator for that page.</p></td>
+            </tr>
+        </table>
+    </main>
 </body>
 
 </html>

@@ -23,50 +23,15 @@ function parseRoleNames(input) {
 		.filter(Boolean);
 }
 
-function createFinalAssignmentForm(target = document.body) {
-	const wrapper = document.createElement("section");
-	const form = document.createElement("form");
-	const heading = document.createElement("h2");
-	const instructions = document.createElement("p");
-	const roleLabel = document.createElement("label");
-	const roleTextarea = document.createElement("textarea");
-	const studentLabel = document.createElement("label");
-	const studentTextarea = document.createElement("textarea");
-	const submitButton = document.createElement("button");
-	const output = document.createElement("div");
+function initAssignmentForm() {
+	const form = document.getElementById("assignmentForm");
+	const roleTextarea = document.getElementById("projectRoles");
+	const studentTextarea = document.getElementById("studentNames");
+	const output = document.getElementById("assignmentResults");
 
-	heading.textContent = "Final Project Role Randomizer";
-	instructions.textContent = "Enter one role and one student per line.";
-	roleLabel.setAttribute("for", "projectRoles");
-	roleLabel.textContent = "Project Roles";
-	roleTextarea.id = "projectRoles";
-	roleTextarea.name = "projectRoles";
-	roleTextarea.rows = 6;
-	roleTextarea.required = true;
-	roleTextarea.placeholder = DEFAULT_PROJECT_ROLES.join("\n");
-	roleTextarea.value = DEFAULT_PROJECT_ROLES.join("\n");
-	studentLabel.setAttribute("for", "studentNames");
-	studentLabel.textContent = "Student Names";
-	studentTextarea.id = "studentNames";
-	studentTextarea.name = "studentNames";
-	studentTextarea.rows = 10;
-	studentTextarea.required = true;
-	studentTextarea.placeholder = "Jane Doe\nJohn Smith\n...";
-	submitButton.type = "submit";
-	submitButton.textContent = "Assign Roles";
-	output.id = "assignmentResults";
-
-	form.append(
-		heading,
-		instructions,
-		roleLabel,
-		roleTextarea,
-		studentLabel,
-		studentTextarea,
-		submitButton
-	);
-	wrapper.append(form, output);
-	target.append(wrapper);
+	if (!form || !roleTextarea || !studentTextarea || !output) {
+		return;
+	}
 
 	form.addEventListener("submit", (event) => {
 		event.preventDefault();
@@ -81,16 +46,9 @@ function createFinalAssignmentForm(target = document.body) {
 			output.textContent = error.message;
 		}
 	});
-
-	return {
-		wrapper,
-		form,
-		roleTextarea,
-		studentTextarea,
-		submitButton,
-		output,
-	};
 }
+
+document.addEventListener("DOMContentLoaded", initAssignmentForm);
 
 function assignRolesForFinalProjects(studentNames, roleNames) {
 	if (!Array.isArray(studentNames)) {
@@ -247,7 +205,6 @@ function formatAssignmentsTable(assignments, roleNames) {
 }
 
 if (typeof window !== "undefined") {
-	window.createFinalAssignmentForm = createFinalAssignmentForm;
 	window.assignRolesForFinalProjects = assignRolesForFinalProjects;
 	window.validateAssignments = validateAssignments;
 	window.formatAssignmentsTable = formatAssignmentsTable;
