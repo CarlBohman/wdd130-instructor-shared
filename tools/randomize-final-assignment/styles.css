@@ -1,0 +1,135 @@
+:root {
+	font-family: Arial, Helvetica, sans-serif;
+	line-height: 1.4;
+}
+
+* {
+	box-sizing: border-box;
+}
+
+body {
+	margin: 0;
+	padding: 2rem 1rem;
+	background: #f4f6f8;
+	color: #1f2937;
+}
+
+section {
+	max-width: 900px;
+	margin: 0 auto;
+	padding: 1.5rem;
+	background: #ffffff;
+	border: 1px solid #d8dee4;
+	border-radius: 10px;
+}
+
+form {
+	display: grid;
+	gap: 0.75rem;
+}
+
+h2 {
+	margin: 0;
+	font-size: 1.5rem;
+}
+
+p {
+	margin: 0;
+	color: #4b5563;
+}
+
+label {
+	font-weight: 600;
+}
+
+textarea {
+	width: 100%;
+	min-height: 220px;
+	padding: 0.75rem;
+	font: inherit;
+	border: 1px solid #cbd5e1;
+	border-radius: 8px;
+	resize: vertical;
+	background: #fff;
+}
+
+textarea:focus {
+	outline: 2px solid #93c5fd;
+	outline-offset: 1px;
+	border-color: #60a5fa;
+}
+
+button[type="submit"] {
+	width: fit-content;
+	padding: 0.65rem 1rem;
+	font: inherit;
+	font-weight: 600;
+	color: #fff;
+	background: #2563eb;
+	border: none;
+	border-radius: 8px;
+	cursor: pointer;
+}
+
+button[type="submit"]:hover {
+	background: #1d4ed8;
+}
+
+#assignmentResults {
+	margin-top: 1.25rem;
+}
+
+#assignmentResults .result-actions {
+	display: flex;
+	align-items: center;
+	gap: 0.75rem;
+	margin-bottom: 0.75rem;
+}
+
+#assignmentResults .copy-html-button {
+	padding: 0.45rem 0.75rem;
+	font: inherit;
+	font-weight: 600;
+	color: #1d4ed8;
+	background: #eaf2ff;
+	border: 1px solid #bfdbfe;
+	border-radius: 6px;
+	cursor: pointer;
+}
+
+#assignmentResults .copy-html-button:hover {
+	background: #dbeafe;
+}
+
+#assignmentResults .copy-status {
+	font-size: 0.95rem;
+	color: #4b5563;
+}
+
+#assignmentResults table {
+	width: 100%;
+	border-collapse: collapse;
+	background: #fff;
+	border: 1px solid #dbe2ea;
+	border-radius: 8px;
+	overflow: hidden;
+}
+
+#assignmentResults th,
+#assignmentResults td {
+	padding: 0.65rem 0.75rem;
+	border-bottom: 1px solid #e5e7eb;
+	text-align: left;
+}
+
+#assignmentResults thead {
+	background: #eef2ff;
+}
+
+#assignmentResults tbody tr:nth-child(even) {
+	background: #f8fafc;
+}
+
+#assignmentResults tbody tr:last-child td {
+	border-bottom: none;
+}
