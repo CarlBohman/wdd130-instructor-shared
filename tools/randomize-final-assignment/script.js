@@ -1,9 +1,4 @@
-const PROJECT_ROLES = [
-	"Client",
-	"Lead Developer",
-	"Junior Developer 1",
-	"Junior Developer 2",
-];
+const DEFAULT_PROJECT_ROLES = ["Client", "Lead Developer", "Junior Developer 1", "Junior Developer 2"];
 
 function shuffleArray(values) {
 	const array = [...values];
@@ -21,30 +16,55 @@ function parseStudentNames(input) {
 		.filter(Boolean);
 }
 
+function parseRoleNames(input) {
+	return input
+		.split("\n")
+		.map((role) => role.trim())
+		.filter(Boolean);
+}
+
 function createFinalAssignmentForm(target = document.body) {
 	const wrapper = document.createElement("section");
 	const form = document.createElement("form");
 	const heading = document.createElement("h2");
 	const instructions = document.createElement("p");
-	const label = document.createElement("label");
-	const textarea = document.createElement("textarea");
+	const roleLabel = document.createElement("label");
+	const roleTextarea = document.createElement("textarea");
+	const studentLabel = document.createElement("label");
+	const studentTextarea = document.createElement("textarea");
 	const submitButton = document.createElement("button");
 	const output = document.createElement("div");
 
 	heading.textContent = "Final Project Role Randomizer";
-	instructions.textContent = "Enter one student name per line.";
-	label.setAttribute("for", "studentNames");
-	label.textContent = "Student Names";
-	textarea.id = "studentNames";
-	textarea.name = "studentNames";
-	textarea.rows = 10;
-	textarea.required = true;
-	textarea.placeholder = "Jane Doe\nJohn Smith\n...";
+	instructions.textContent = "Enter one role and one student per line.";
+	roleLabel.setAttribute("for", "projectRoles");
+	roleLabel.textContent = "Project Roles";
+	roleTextarea.id = "projectRoles";
+	roleTextarea.name = "projectRoles";
+	roleTextarea.rows = 6;
+	roleTextarea.required = true;
+	roleTextarea.placeholder = DEFAULT_PROJECT_ROLES.join("\n");
+	roleTextarea.value = DEFAULT_PROJECT_ROLES.join("\n");
+	studentLabel.setAttribute("for", "studentNames");
+	studentLabel.textContent = "Student Names";
+	studentTextarea.id = "studentNames";
+	studentTextarea.name = "studentNames";
+	studentTextarea.rows = 10;
+	studentTextarea.required = true;
+	studentTextarea.placeholder = "Jane Doe\nJohn Smith\n...";
 	submitButton.type = "submit";
 	submitButton.textContent = "Assign Roles";
 	output.id = "assignmentResults";
 
-	form.append(heading, instructions, label, textarea, submitButton);
+	form.append(
+		heading,
+		instructions,
+		roleLabel,
+		roleTextarea,
+		studentLabel,
+		studentTextarea,
+		submitButton
+	);
 	wrapper.append(form, output);
 	target.append(wrapper);
 
@@ -52,34 +72,50 @@ function createFinalAssignmentForm(target = document.body) {
 		event.preventDefault();
 
 		try {
-			const students = parseStudentNames(textarea.value);
-			const assignments = assignRolesForFinalProjects(students);
+			const roles = parseRoleNames(roleTextarea.value);
+			const students = parseStudentNames(studentTextarea.value);
+			const assignments = assignRolesForFinalProjects(students, roles);
 			output.innerHTML = "";
-			output.append(formatAssignmentsTable(assignments));
+			output.append(formatAssignmentsTable(assignments, roles));
 		} catch (error) {
 			output.textContent = error.message;
 		}
 	});
 
-	return { wrapper, form, textarea, submitButton, output };
+	return {
+		wrapper,
+		form,
+		roleTextarea,
+		studentTextarea,
+		submitButton,
+		output,
+	};
 }
 
-function assignRolesForFinalProjects(studentNames) {
+function assignRolesForFinalProjects(studentNames, roleNames) {
 	if (!Array.isArray(studentNames)) {
 		throw new Error("Student list must be an array of names.");
 	}
+	if (!Array.isArray(roleNames)) {
+		throw new Error("Role list must be an array of role names.");
+	}
 
 	const uniqueNames = [...new Set(studentNames.map((name) => name.trim()).filter(Boolean))];
+	const uniqueRoles = [...new Set(roleNames.map((role) => role.trim()).filter(Boolean))];
 
-	if (uniqueNames.length < PROJECT_ROLES.length) {
-		throw new Error("At least 4 unique student names are required.");
+	if (uniqueRoles.length < 2) {
+		throw new Error("At least 2 unique role names are required.");
+	}
+
+	if (uniqueNames.length < uniqueRoles.length) {
+		throw new Error(`At least ${uniqueRoles.length} unique student names are required.`);
 	}
 
 	const randomizedStudents = shuffleArray(uniqueNames);
 	const assignments = randomizedStudents.map((_, projectIndex) => {
 		const project = { project: projectIndex + 1 };
 
-		PROJECT_ROLES.forEach((role, roleIndex) => {
+		uniqueRoles.forEach((role, roleIndex) => {
 			const studentIndex = (projectIndex + roleIndex) % randomizedStudents.length;
 			project[role] = randomizedStudents[studentIndex];
 		});
@@ -87,38 +123,25 @@ function assignRolesForFinalProjects(studentNames) {
 		return project;
 	});
 
-	validateAssignments(assignments, randomizedStudents);
+	validateAssignments(assignments, randomizedStudents, uniqueRoles);
 	return assignments;
 }
 
-function validateAssignments(assignments, studentNames) {
+function validateAssignments(assignments, studentNames, roleNames) {
 	const roleCountsByStudent = new Map(
 		studentNames.map((name) => [
 			name,
-			PROJECT_ROLES.reduce((counts, role) => {
+			roleNames.reduce((counts, role) => {
 				counts[role] = 0;
 				return counts;
 			}, {}),
 		])
 	);
 
-	const clientToLead = new Map();
-	assignments.forEach((assignment) => {
-		clientToLead.set(assignment["Client"], assignment["Lead Developer"]);
-	});
-
-	clientToLead.forEach((lead, client) => {
-		if (clientToLead.get(lead) === client) {
-			throw new Error(
-				`Invalid reciprocal pair: ${client} and ${lead} cannot be each other's Client/Lead Developer.`
-			);
-		}
-	});
-
 	assignments.forEach((assignment) => {
 		const usedNames = new Set();
 
-		PROJECT_ROLES.forEach((role) => {
+		roleNames.forEach((role) => {
 			const student = assignment[role];
 			if (usedNames.has(student)) {
 				throw new Error(`A student cannot hold two roles in project ${assignment.project}.`);
@@ -130,7 +153,7 @@ function validateAssignments(assignments, studentNames) {
 	});
 
 	roleCountsByStudent.forEach((roleCounts, student) => {
-		PROJECT_ROLES.forEach((role) => {
+		roleNames.forEach((role) => {
 			if (roleCounts[role] !== 1) {
 				throw new Error(`${student} was not assigned to ${role} exactly once.`);
 			}
@@ -183,15 +206,16 @@ function createCopyHtmlButton(table) {
 	return actions;
 }
 
-function formatAssignmentsTable(assignments) {
+function formatAssignmentsTable(assignments, roleNames) {
 	const wrapper = document.createElement("div");
 	const table = document.createElement("table");
 	const thead = document.createElement("thead");
 	const tbody = document.createElement("tbody");
 	const headerRow = document.createElement("tr");
-	const columns = ["Project", ...PROJECT_ROLES];
+	const columns = ["Project", ...roleNames];
+	const sortRole = roleNames.includes("Client") ? "Client" : roleNames[0];
 	const sortedAssignments = [...assignments].sort((a, b) =>
-		String(a["Client"]).localeCompare(String(b["Client"]), undefined, {
+		String(a[sortRole]).localeCompare(String(b[sortRole]), undefined, {
 			sensitivity: "base",
 		})
 	);
@@ -206,13 +230,7 @@ function formatAssignmentsTable(assignments) {
 
 	sortedAssignments.forEach((assignment, index) => {
 		const row = document.createElement("tr");
-		const values = [
-			index + 1,
-			assignment["Client"],
-			assignment["Lead Developer"],
-			assignment["Junior Developer 1"],
-			assignment["Junior Developer 2"],
-		];
+		const values = [index + 1, ...roleNames.map((role) => assignment[role])];
 
 		values.forEach((value) => {
 			const td = document.createElement("td");
@@ -233,4 +251,5 @@ if (typeof window !== "undefined") {
 	window.assignRolesForFinalProjects = assignRolesForFinalProjects;
 	window.validateAssignments = validateAssignments;
 	window.formatAssignmentsTable = formatAssignmentsTable;
+	window.parseRoleNames = parseRoleNames;
 }
