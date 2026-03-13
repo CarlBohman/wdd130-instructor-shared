@@ -11,7 +11,14 @@
     <main class="page-card">
         <nav class="back-link"><a href="../index.html">Tools</a></nav>
         <h1>Randomize Final Assignment</h1>
-        <section>
+        <div class="mode-toggle" role="tablist" aria-label="Assignment tool mode">
+            <button type="button" class="mode-button is-active" data-mode-target="generateMode"
+                aria-selected="true">Generate New Assignments</button>
+            <button type="button" class="mode-button" data-mode-target="repairMode"
+                aria-selected="false">Repair Existing Assignments</button>
+        </div>
+
+        <section id="generateMode" class="tool-mode is-active">
             <form id="assignmentForm">
                 <p>Enter one role and one student per line.</p>
                 <label for="projectRoles">Project Roles</label>
@@ -20,12 +27,37 @@
 Lead Developer
 Junior Developer 1
 Junior Developer 2</textarea>
+                <label for="roleGap">Role Gap (optional)</label>
+                <input id="roleGap" name="roleGap" type="number" min="0" step="1"
+                    placeholder="Leave blank for automatic gap" />
                 <label for="studentNames">Student Names</label>
                 <textarea id="studentNames" name="studentNames" rows="10" required
                     placeholder="Jane Doe&#10;John Smith&#10;..."></textarea>
                 <button type="submit">Assign Roles</button>
             </form>
             <div id="assignmentResults"></div>
+        </section>
+
+        <section id="repairMode" class="tool-mode" hidden>
+            <form id="repairForm">
+                <p>Paste an existing assignment table, load students, then repair for one dropped student.</p>
+                <label for="existingTableHtml">Existing Table HTML</label>
+                <textarea id="existingTableHtml" name="existingTableHtml" rows="10" required
+                    placeholder="Paste the full <table>...</table> HTML here"></textarea>
+                <button id="loadRepairTable" type="button">Load Table Students</button>
+                <label for="droppedStudent">Dropped Student</label>
+                <select id="droppedStudent" name="droppedStudent" required>
+                    <option value="">Load table first...</option>
+                </select>
+                <label for="repairStrategy">Repair Strategy</label>
+                <select id="repairStrategy" name="repairStrategy">
+                    <option value="minimal" selected>Minimal changes</option>
+                    <option value="minimize-pairs">Minimize repeated pairs</option>
+                    <option value="no-extra-swaps">No extra swaps (may keep duplicate roles in a project)</option>
+                </select>
+                <button type="submit">Repair Assignments</button>
+            </form>
+            <div id="repairResults"></div>
         </section>
     </main>
     <script src="script.js"></script>
