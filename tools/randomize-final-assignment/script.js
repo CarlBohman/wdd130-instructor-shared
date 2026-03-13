@@ -95,28 +95,6 @@ function parseAssignmentsTableHtml(tableHtml) {
 	return { assignments, roleNames };
 }
 
-function greatestCommonDivisor(a, b) {
-	let x = Math.abs(a);
-	let y = Math.abs(b);
-
-	while (y !== 0) {
-		const temp = y;
-		y = x % y;
-		x = temp;
-	}
-
-	return x;
-}
-
-function hasValidRowSpacing(step, studentCount, roleCount) {
-	for (let difference = 1; difference < roleCount; difference += 1) {
-		if ((difference * step) % studentCount === 0) {
-			return false;
-		}
-	}
-
-	return true;
-}
 
 function findMissingStudentForRole(assignments, role, expectedStudents, droppedStudent) {
 	const roleStudents = new Set(
@@ -448,48 +426,10 @@ function initModeToggle() {
 	});
 }
 
-function chooseRoleStep(studentCount, roleCount, requestedGap) {
-	if (studentCount <= roleCount) {
-		return 1;
-	}
-
-	const maxGap = Math.max(0, studentCount - 2);
-	const numericGap = Number.isFinite(requestedGap) ? Math.max(0, Math.floor(requestedGap)) : null;
-	const preferredGap = numericGap === null ? Math.floor(studentCount / (roleCount * 2)) : Math.min(numericGap, maxGap);
-
-	for (let gapOffset = 0; gapOffset <= maxGap; gapOffset += 1) {
-		const gap = preferredGap + gapOffset;
-		const step = gap + 1;
-
-		if (step >= studentCount) {
-			continue;
-		}
-
-		if (greatestCommonDivisor(step, studentCount) !== 1) {
-			continue;
-		}
-
-		if (!hasValidRowSpacing(step, studentCount, roleCount)) {
-			continue;
-		}
-
-		return step;
-	}
-
-	for (let step = 1; step < studentCount; step += 1) {
-		if (hasValidRowSpacing(step, studentCount, roleCount)) {
-			return step;
-		}
-	}
-
-	throw new Error("Unable to choose a valid role gap for this class size and role count.");
-}
-
 function initAssignmentForm() {
 	const form = document.getElementById("assignmentForm");
 	const roleTextarea = document.getElementById("projectRoles");
 	const studentTextarea = document.getElementById("studentNames");
-	const roleGapInput = document.getElementById("roleGap");
 	const output = document.getElementById("assignmentResults");
 
 	if (!form || !roleTextarea || !studentTextarea || !output) {
@@ -502,8 +442,7 @@ function initAssignmentForm() {
 		try {
 			const roles = parseRoleNames(roleTextarea.value);
 			const students = parseStudentNames(studentTextarea.value);
-			const requestedGap = roleGapInput && roleGapInput.value !== "" ? Number(roleGapInput.value) : null;
-			const assignments = assignRolesForFinalProjects(students, roles, requestedGap);
+			const assignments = assignRolesForFinalProjects(students, roles);
 			output.innerHTML = "";
 			output.append(formatAssignmentsTable(assignments, roles));
 		} catch (error) {
@@ -577,7 +516,7 @@ document.addEventListener("DOMContentLoaded", initAssignmentForm);
 document.addEventListener("DOMContentLoaded", initRepairForm);
 document.addEventListener("DOMContentLoaded", initModeToggle);
 
-function assignRolesForFinalProjects(studentNames, roleNames, requestedGap = null) {
+function assignRolesForFinalProjects(studentNames, roleNames) {
 	if (!Array.isArray(studentNames)) {
 		throw new Error("Student list must be an array of names.");
 	}
@@ -596,26 +535,18 @@ function assignRolesForFinalProjects(studentNames, roleNames, requestedGap = nul
 		throw new Error(`At least ${uniqueRoles.length} unique student names are required.`);
 	}
 
-	if (requestedGap !== null && (!Number.isFinite(requestedGap) || requestedGap < 0)) {
-		throw new Error("Role gap must be a non-negative number.");
-	}
-
 	const randomizedStudents = shuffleArray(uniqueNames);
-	const roleStep = chooseRoleStep(randomizedStudents.length, uniqueRoles.length, requestedGap);
 	const assignments = randomizedStudents.map((_, projectIndex) => {
 		const project = { project: projectIndex + 1 };
 
 		uniqueRoles.forEach((role, roleIndex) => {
-			const studentIndex =
-				(projectIndex + roleIndex * roleStep) % randomizedStudents.length;
+			const studentIndex = (projectIndex + roleIndex) % randomizedStudents.length;
 			project[role] = randomizedStudents[studentIndex];
 		});
 
 		return project;
 	});
 
-	assignments.roleStep = roleStep;
-	assignments.roleGap = roleStep - 1;
 	validateAssignments(assignments, randomizedStudents, uniqueRoles);
 	return assignments;
 }
@@ -706,7 +637,6 @@ function formatAssignmentsTable(assignments, roleNames, options = {}) {
 	const thead = document.createElement("thead");
 	const tbody = document.createElement("tbody");
 	const headerRow = document.createElement("tr");
-	const stepSummary = document.createElement("p");
 	const columns = ["Project", ...roleNames];
 	const preserveProjectNumbers = options.preserveProjectNumbers === true;
 	const sortByRole = options.sortByRole !== false;
@@ -719,11 +649,6 @@ function formatAssignmentsTable(assignments, roleNames, options = {}) {
 				})
 			)
 		: [...assignments];
-
-	stepSummary.textContent =
-		Number.isFinite(assignments.roleGap) && Number.isFinite(assignments.roleStep)
-			? `Role gap used: ${assignments.roleGap} (step ${assignments.roleStep}).`
-			: "";
 
 	columns.forEach((column) => {
 		const th = document.createElement("th");
@@ -759,7 +684,7 @@ function formatAssignmentsTable(assignments, roleNames, options = {}) {
 	});
 
 	table.append(thead, tbody);
-	wrapper.append(stepSummary, createCopyHtmlButton(table), table);
+	wrapper.append(createCopyHtmlButton(table), table);
 	return wrapper;
 }
 
