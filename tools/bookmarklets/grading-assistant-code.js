@@ -162,6 +162,16 @@ function createIframe() {
         var content = document.documentElement.innerHTML;
         document.body.innerHTML = iframe.outerHTML;
         iframe = document.getElementById("originalFrame");
+        // Attach the load listener BEFORE doc.open()/write()/close() so it
+        // cannot miss the event.  The synchronous write means doc.body is
+        // available immediately after doc.close(); loading of sub-resources
+        // (images, stylesheets) is handled by runGradingAssistant, which adds
+        // its own listener after createIframe() returns.
+        try {
+            iframe.contentWindow.addEventListener('load', function _onIframeLoad() {
+                try { iframe.contentWindow.removeEventListener('load', _onIframeLoad); } catch (e) { }
+            });
+        } catch (e) { }
         var doc = iframe.contentWindow.document;
         doc.open();
         doc.write(content);
@@ -174,36 +184,6 @@ function createIframe() {
         if (iframe == null) {
             alert("Iframe not found");
             return;
-        }
-        // wait (up to 5s) for the iframe's document to be available/loaded,
-        // prefer the iframe 'load' event but also check readyState as a fallback
-        try {
-            var _start = Date.now();
-            var _timeout = 5000; // ms
-            var _loaded = false;
-            function _onIframeLoad() { _loaded = true; try { iframe.contentWindow.removeEventListener('load', _onIframeLoad); } catch (e) { } }
-            try {
-                if (iframe && iframe.contentWindow) {
-                    iframe.contentWindow.addEventListener('load', _onIframeLoad);
-                }
-            } catch (e) {
-                // ignore (possible cross-origin access)
-            }
-            while (true) {
-                try {
-                    if (iframe && iframe.contentWindow && iframe.contentWindow.document) {
-                        var _doc = iframe.contentWindow.document;
-                        if (_doc.readyState === 'complete' || _doc.body) { _loaded = true; }
-                    }
-                } catch (e) {
-                    // ignore access errors
-                }
-                if (_loaded) break;
-                if (Date.now() - _start > _timeout) break;
-            }
-            try { iframe.contentWindow.removeEventListener('load', _onIframeLoad); } catch (e) { }
-        } catch (e) {
-            // ignore and continue if access throws
         }
         // Ensure body exists before trying to access it
         if (!iframe.contentWindow.document.body) {
