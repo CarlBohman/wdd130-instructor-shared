@@ -30,6 +30,12 @@ Junior Developer 2</textarea>
                 <label for="studentNames">Student Names</label>
                 <textarea id="studentNames" name="studentNames" rows="10" required
                     placeholder="Jane Doe&#10;John Smith&#10;..."></textarea>
+                <label for="assignmentStrategy">Assignment Strategy</label>
+                <select id="assignmentStrategy" name="assignmentStrategy">
+                    <option value="randomized" selected>Randomized (robust, recommended)</option>
+                    <option value="sequential">Sequential (cyclic, simple)</option>
+                    <option value="experimental-pair-minimizing">Experimental: maximize pair variety</option>
+                </select>
                 <button type="submit">Assign Roles</button>
             </form>
             <div id="assignmentResults"></div>

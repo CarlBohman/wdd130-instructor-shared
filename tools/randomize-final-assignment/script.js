@@ -1,3 +1,159 @@
+// Robust randomized assignment strategy (main)
+function assignRolesRandomized(studentNames, roleNames) {
+	// Constraints:
+	// 1. All students are assigned each role exactly once across all projects.
+	// 2. No student is assigned two roles for a single project.
+	// 3. No pair of students is matched in the first two roles more than once (order matters).
+	// 4. (Ideal) Maximize team member variety.
+
+	const uniqueNames = [...new Set(studentNames.map((name) => name.trim()).filter(Boolean))];
+	const uniqueRoles = [...new Set(roleNames.map((role) => role.trim()).filter(Boolean))];
+	const numProjects = uniqueNames.length;
+	if (uniqueRoles.length < 2) throw new Error("At least 2 unique role names are required.");
+	if (uniqueNames.length < uniqueRoles.length) throw new Error(`At least ${uniqueRoles.length} unique student names are required.`);
+
+	// 1. Assign first role in order
+	const assignments = [];
+	for (let i = 0; i < numProjects; i++) {
+		assignments.push({ project: i + 1 });
+		assignments[i][uniqueRoles[0]] = uniqueNames[i];
+	}
+
+	// 2. Randomly assign second role, fix violations by swaps
+	let secondRolePool = shuffleArray(uniqueNames);
+	for (let i = 0; i < numProjects; i++) {
+		assignments[i][uniqueRoles[1]] = secondRolePool[i];
+	}
+	// Fix violations for first two roles (unordered pairs)
+	const firstRole = uniqueRoles[0];
+	const secondRole = uniqueRoles[1];
+	const usedPairs = new Set();
+	let maxSwaps = numProjects * 4;
+	let swaps = 0;
+	let changed = true;
+	function unorderedPairKey(a, b) {
+		return a < b ? `${a}|${b}` : `${b}|${a}`;
+	}
+	while (changed && swaps < maxSwaps) {
+		changed = false;
+		usedPairs.clear();
+		for (let i = 0; i < numProjects; i++) {
+			const a = assignments[i][firstRole];
+			const b = assignments[i][secondRole];
+			if (a === b || usedPairs.has(unorderedPairKey(a, b))) {
+				// Find a row to swap with
+				for (let j = 0; j < numProjects; j++) {
+					if (i === j) continue;
+					const b2 = assignments[j][secondRole];
+					if (b2 !== a && b2 !== assignments[j][firstRole] && !usedPairs.has(unorderedPairKey(a, b2)) && !usedPairs.has(unorderedPairKey(assignments[j][firstRole], b))) {
+						// Swap second role between i and j
+						assignments[i][secondRole] = b2;
+						assignments[j][secondRole] = b;
+						swaps++;
+						changed = true;
+						break;
+					}
+				}
+			}
+			usedPairs.add(unorderedPairKey(a, assignments[i][secondRole]));
+		}
+	}
+	console.log(`[Randomized Assignment] Swaps for first two roles: ${swaps}`);
+
+	// 3. Randomly assign remaining roles, one at a time, fixing row violations by swaps
+	for (let r = 2; r < uniqueRoles.length; r++) {
+		let pool = shuffleArray(uniqueNames);
+		for (let i = 0; i < numProjects; i++) {
+			assignments[i][uniqueRoles[r]] = pool[i];
+		}
+		// Fix row violations (no student twice in a row)
+		let maxSwaps = numProjects * 4;
+		let swaps = 0;
+		let changed = true;
+		while (changed && swaps < maxSwaps) {
+			changed = false;
+			for (let i = 0; i < numProjects; i++) {
+				const row = assignments[i];
+				const seen = new Set();
+				let dup = null;
+				for (let k = 0; k <= r; k++) {
+					const s = row[uniqueRoles[k]];
+					if (seen.has(s)) { dup = s; break; }
+					seen.add(s);
+				}
+				if (dup) {
+					// Find a row to swap with
+					for (let j = 0; j < numProjects; j++) {
+						if (i === j) continue;
+						const s2 = assignments[j][uniqueRoles[r]];
+						// Check if s2 is already in row i, and dup is already in row j (for roles up to r)
+						let s2InRowI = false;
+						let dupInRowJ = false;
+						for (let k = 0; k < r; k++) {
+							if (assignments[i][uniqueRoles[k]] === s2) s2InRowI = true;
+							if (assignments[j][uniqueRoles[k]] === dup) dupInRowJ = true;
+						}
+						if (!seen.has(s2) && !s2InRowI && !dupInRowJ) {
+							// Swap
+							assignments[i][uniqueRoles[r]] = s2;
+							assignments[j][uniqueRoles[r]] = dup;
+							swaps++;
+							changed = true;
+							break;
+						}
+					}
+				}
+			}
+		}
+		console.log(`[Randomized Assignment] Swaps for role '${uniqueRoles[r]}': ${swaps}`);
+	}
+
+	// 4. (Optional) Post-process to break up large overlaps in teams
+	// Try up to 1000 swaps to break up groups of 3+ in common
+	const maxOverlapSwaps = 1000;
+	let overlapSwaps = 0;
+	function countOverlap(a, b) {
+		let count = 0;
+		for (const role of uniqueRoles) {
+			if (a[role] === b[role]) count++;
+		}
+		return count;
+	}
+	let foundOverlap = true;
+	while (foundOverlap && overlapSwaps < maxOverlapSwaps) {
+		foundOverlap = false;
+		for (let i = 0; i < numProjects; i++) {
+			for (let j = i + 1; j < numProjects; j++) {
+				if (countOverlap(assignments[i], assignments[j]) >= 3) {
+					// Try to swap a role >= 2
+					for (let r = 2; r < uniqueRoles.length; r++) {
+						const s1 = assignments[i][uniqueRoles[r]];
+						const s2 = assignments[j][uniqueRoles[r]];
+						if (s1 !== s2 && !Object.values(assignments[i]).includes(s2) && !Object.values(assignments[j]).includes(s1)) {
+							assignments[i][uniqueRoles[r]] = s2;
+							assignments[j][uniqueRoles[r]] = s1;
+							overlapSwaps++;
+							foundOverlap = true;
+							break;
+						}
+					}
+				}
+			}
+		}
+	}
+	if (overlapSwaps > 0) {
+		console.log(`[Randomized Assignment] Overlap-breaking swaps: ${overlapSwaps}`);
+	}
+
+	validateAssignments(assignments, uniqueNames, uniqueRoles);
+	return assignments;
+}
+// Assignment Constraints (for all strategies):
+// 1. All students are assigned each role exactly once across all projects.
+// 2. No student is assigned two roles for a single project.
+// 3. No pair of students is matched in the first two roles (e.g., Client/Lead) more than once (order matters: A/B and B/A are different).
+// 4. (Ideal, not mandatory) Maximize team member variety so students work with as many others as possible.
+
 const DEFAULT_PROJECT_ROLES = ["Client", "Lead Developer", "Junior Developer 1", "Junior Developer 2"];
 
 function shuffleArray(values) {
@@ -436,19 +592,63 @@ function initAssignmentForm() {
 		return;
 	}
 
+	const strategySelect = document.getElementById("assignmentStrategy");
 	form.addEventListener("submit", (event) => {
 		event.preventDefault();
 
 		try {
 			const roles = parseRoleNames(roleTextarea.value);
 			const students = parseStudentNames(studentTextarea.value);
-			const assignments = assignRolesForFinalProjects(students, roles);
+			const strategy = strategySelect ? strategySelect.value : "randomized";
+			let assignments;
+			if (strategy === "sequential") {
+				assignments = assignRolesSequential(students, roles);
+			} else if (strategy === "experimental-pair-minimizing") {
+				assignments = assignRolesForFinalProjects(students, roles);
+			} else {
+				assignments = assignRolesRandomized(students, roles);
+			}
 			output.innerHTML = "";
 			output.append(formatAssignmentsTable(assignments, roles));
 		} catch (error) {
 			output.textContent = error.message;
 		}
 	});
+	// Original sequential assignment (cyclic, simple)
+	function assignRolesSequential(studentNames, roleNames) {
+		if (!Array.isArray(studentNames)) {
+			throw new Error("Student list must be an array of names.");
+		}
+		if (!Array.isArray(roleNames)) {
+			throw new Error("Role list must be an array of role names.");
+		}
+
+		const uniqueNames = [...new Set(studentNames.map((name) => name.trim()).filter(Boolean))];
+		const uniqueRoles = [...new Set(roleNames.map((role) => role.trim()).filter(Boolean))];
+
+		if (uniqueRoles.length < 2) {
+			throw new Error("At least 2 unique role names are required.");
+		}
+
+		if (uniqueNames.length < uniqueRoles.length) {
+			throw new Error(`At least ${uniqueRoles.length} unique student names are required.`);
+		}
+
+		const randomizedStudents = shuffleArray(uniqueNames);
+		const assignments = randomizedStudents.map((_, projectIndex) => {
+			const project = { project: projectIndex + 1 };
+
+			uniqueRoles.forEach((role, roleIndex) => {
+				const studentIndex = (projectIndex + roleIndex) % randomizedStudents.length;
+				project[role] = randomizedStudents[studentIndex];
+			});
+
+			return project;
+		});
+
+		validateAssignments(assignments, randomizedStudents, uniqueRoles);
+		return assignments;
+	}
 }
 
 function initRepairForm() {
@@ -516,7 +716,11 @@ document.addEventListener("DOMContentLoaded", initAssignmentForm);
 document.addEventListener("DOMContentLoaded", initRepairForm);
 document.addEventListener("DOMContentLoaded", initModeToggle);
 
-function assignRolesForFinalProjects(studentNames, roleNames) {
+// Greedy pair-minimizing assignment for final projects
+
+
+function assignRolesForFinalProjects(studentNames, roleNames, options = {}) {
+	// See constraints above.
 	if (!Array.isArray(studentNames)) {
 		throw new Error("Student list must be an array of names.");
 	}
@@ -530,24 +734,99 @@ function assignRolesForFinalProjects(studentNames, roleNames) {
 	if (uniqueRoles.length < 2) {
 		throw new Error("At least 2 unique role names are required.");
 	}
-
 	if (uniqueNames.length < uniqueRoles.length) {
 		throw new Error(`At least ${uniqueRoles.length} unique student names are required.`);
 	}
 
-	const randomizedStudents = shuffleArray(uniqueNames);
-	const assignments = randomizedStudents.map((_, projectIndex) => {
-		const project = { project: projectIndex + 1 };
+	const numProjects = uniqueNames.length;
+	// Track which students have been assigned to which roles
+	const studentRoleCounts = new Map(); // Map student -> Set of roles
+	uniqueNames.forEach((name) => studentRoleCounts.set(name, new Set()));
+	// Track first-two-role pairs (ordered, e.g., 'Client:Alice|Lead:Bob')
+	const firstRole = uniqueRoles[0];
+	const secondRole = uniqueRoles[1];
+	const firstTwoRolePairs = new Set();
 
-		uniqueRoles.forEach((role, roleIndex) => {
-			const studentIndex = (projectIndex + roleIndex) % randomizedStudents.length;
-			project[role] = randomizedStudents[studentIndex];
-		});
+	const assignments = [];
+	let availableStudents = [...uniqueNames];
+	for (let projectIndex = 0; projectIndex < numProjects; projectIndex++) {
+		let bestAssignment = null;
+		let bestScore = -1;
+		let bestOrder = null;
+		let firstValidAssignment = null;
+		let firstValidOrder = null;
+		const maxAttempts = 300;
+		for (let attempt = 0; attempt < maxAttempts; attempt++) {
+			let order = shuffleArray(availableStudents);
+			const assignment = { project: projectIndex + 1 };
+			let valid = true;
+			// Assign roles, ensuring each student is only assigned to each role once (constraint 1)
+			const usedThisProject = new Set();
+			for (let r = 0; r < uniqueRoles.length; r++) {
+				const student = order[r % order.length];
+				if (studentRoleCounts.get(student).has(uniqueRoles[r]) || usedThisProject.has(student)) {
+					valid = false;
+					break;
+				}
+				assignment[uniqueRoles[r]] = student;
+				usedThisProject.add(student);
+			}
+			if (!valid) continue;
+			// Check first-two-role pair constraint (constraint 3)
+			const pairKey = `${firstRole}:${assignment[firstRole]}|${secondRole}:${assignment[secondRole]}`;
+			if (firstTwoRolePairs.has(pairKey)) continue;
+			// Save the first valid assignment in case we can't maximize variety
+			if (!firstValidAssignment) {
+				firstValidAssignment = Object.assign({}, assignment);
+				firstValidOrder = [...order];
+			}
+			// Score: maximize team variety (constraint 4, not mandatory)
+			// Count how many new student pairs are introduced in this project
+			let newPairs = 0;
+			for (let i = 0; i < uniqueRoles.length; i++) {
+				for (let j = i + 1; j < uniqueRoles.length; j++) {
+					const a = assignment[uniqueRoles[i]];
+					const b = assignment[uniqueRoles[j]];
+					if (a !== b) {
+						// Count as new if these two have not been together in any previous project
+						let seen = false;
+						for (const prev of assignments) {
+							const prevA = prev[uniqueRoles[i]];
+							const prevB = prev[uniqueRoles[j]];
+							if ((prevA === a && prevB === b) || (prevA === b && prevB === a)) {
+								seen = true;
+								break;
+							}
+						}
+						if (!seen) newPairs++;
+					}
+				}
+			}
+			if (newPairs > bestScore) {
+				bestScore = newPairs;
+				bestAssignment = Object.assign({}, assignment);
+				bestOrder = [...order];
+				if (newPairs === (uniqueRoles.length * (uniqueRoles.length - 1)) / 2) break;
+			}
+		}
+		// Use the best assignment found, or fallback to the first valid one
+		const finalAssignment = bestAssignment || firstValidAssignment;
+		const finalOrder = bestOrder || firstValidOrder;
+		if (!finalAssignment) {
+			throw new Error("Unable to find a valid assignment that meets all constraints. Try fewer projects or roles.");
+		}
+		// Mark roles for each student
+		for (let r = 0; r < uniqueRoles.length; r++) {
+			studentRoleCounts.get(finalAssignment[uniqueRoles[r]]).add(uniqueRoles[r]);
+		}
+		// Mark first-two-role pair as used
+		const pairKey = `${firstRole}:${finalAssignment[firstRole]}|${secondRole}:${finalAssignment[secondRole]}`;
+		firstTwoRolePairs.add(pairKey);
+		assignments.push(finalAssignment);
+		availableStudents = finalOrder.slice(1).concat(finalOrder[0]);
+	}
 
-		return project;
-	});
-
-	validateAssignments(assignments, randomizedStudents, uniqueRoles);
+	validateAssignments(assignments, uniqueNames, uniqueRoles);
 	return assignments;
 }
 
@@ -644,10 +923,10 @@ function formatAssignmentsTable(assignments, roleNames, options = {}) {
 	const sortRole = roleNames.includes("Client") ? "Client" : roleNames[0];
 	const sortedAssignments = sortByRole
 		? [...assignments].sort((a, b) =>
-				String(a[sortRole]).localeCompare(String(b[sortRole]), undefined, {
-					sensitivity: "base",
-				})
-			)
+			String(a[sortRole]).localeCompare(String(b[sortRole]), undefined, {
+				sensitivity: "base",
+			})
+		)
 		: [...assignments];
 
 	columns.forEach((column) => {
