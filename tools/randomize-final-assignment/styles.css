@@ -1,6 +1,39 @@
 :root {
 	font-family: Arial, Helvetica, sans-serif;
 	line-height: 1.4;
+	--color-bg-main: #f4f6f8;
+	--color-text-main: #1f2937;
+	--color-section-bg: #ffffff;
+	--color-section-border: #d8dee4;
+	--color-section-radius: 10px;
+	--color-mode-bg: #eef2ff;
+	--color-mode-border: #c7d2fe;
+	--color-mode-active-bg: #1d4ed8;
+	--color-mode-active-border: #1d4ed8;
+	--color-mode-active-text: #fff;
+	--color-label: #4b5563;
+	--color-label-strong: #1e3a8a;
+	--color-textarea-border: #cbd5e1;
+	--color-textarea-focus: #93c5fd;
+	--color-textarea-focus-border: #60a5fa;
+	--color-select-border: #cbd5e1;
+	--color-select-focus: #93c5fd;
+	--color-select-focus-border: #60a5fa;
+	--color-btn-submit-bg: #2563eb;
+	--color-btn-submit-hover: #1d4ed8;
+	--color-btn-submit-text: #fff;
+	--color-copy-btn-bg: #eaf2ff;
+	--color-copy-btn-border: #bfdbfe;
+	--color-copy-btn-hover: #dbeafe;
+	--color-copy-btn-text: #1d4ed8;
+	--color-swap-btn-active-bg: #f59e42;
+	--color-swap-btn-active-border: #f59e42;
+	--color-swap-btn-active-text: #fff;
+	--color-table-border: #dbe2ea;
+	--color-table-th-bg: #eef2ff;
+	--color-table-tr-even: #f8fafc;
+	--color-table-td-border: #e5e7eb;
+	--color-change-log: #374151;
 }
 
 * {
@@ -10,17 +43,17 @@
 body {
 	margin: 0;
 	padding: 2rem 1rem;
-	background: #f4f6f8;
-	color: #1f2937;
+	background: var(--color-bg-main);
+	color: var(--color-text-main);
 }
 
 section {
 	max-width: 900px;
 	margin: 0 auto;
 	padding: 1.5rem;
-	background: #ffffff;
-	border: 1px solid #d8dee4;
-	border-radius: 10px;
+	background: var(--color-section-bg);
+	border: 1px solid var(--color-section-border);
+	border-radius: var(--color-section-radius);
 }
 
 .mode-toggle {
@@ -34,17 +67,17 @@ section {
 	padding: 0.55rem 0.85rem;
 	font: inherit;
 	font-weight: 600;
-	background: #eef2ff;
-	border: 1px solid #c7d2fe;
+	background: var(--color-mode-bg);
+	border: 1px solid var(--color-mode-border);
 	border-radius: 8px;
-	color: #1e3a8a;
+	color: var(--color-label-strong);
 	cursor: pointer;
 }
 
 .mode-button.is-active {
-	background: #1d4ed8;
-	border-color: #1d4ed8;
-	color: #fff;
+	background: var(--color-mode-active-bg);
+	border-color: var(--color-mode-active-border);
+	color: var(--color-mode-active-text);
 }
 
 .tool-mode {
@@ -79,16 +112,16 @@ textarea {
 	min-height: 220px;
 	padding: 0.75rem;
 	font: inherit;
-	border: 1px solid #cbd5e1;
+	border: 1px solid var(--color-textarea-border);
 	border-radius: 8px;
 	resize: vertical;
-	background: #fff;
+	background: var(--color-section-bg);
 }
 
 textarea:focus {
-	outline: 2px solid #93c5fd;
+	outline: 2px solid var(--color-textarea-focus);
 	outline-offset: 1px;
-	border-color: #60a5fa;
+	border-color: var(--color-textarea-focus-border);
 }
 
 select {
@@ -96,15 +129,15 @@ select {
 	max-width: 360px;
 	padding: 0.55rem 0.65rem;
 	font: inherit;
-	border: 1px solid #cbd5e1;
+	border: 1px solid var(--color-select-border);
 	border-radius: 8px;
-	background: #fff;
+	background: var(--color-section-bg);
 }
 
 select:focus {
-	outline: 2px solid #93c5fd;
+	outline: 2px solid var(--color-select-focus);
 	outline-offset: 1px;
-	border-color: #60a5fa;
+	border-color: var(--color-select-focus-border);
 }
 
 button[type="submit"] {
@@ -112,15 +145,15 @@ button[type="submit"] {
 	padding: 0.65rem 1rem;
 	font: inherit;
 	font-weight: 600;
-	color: #fff;
-	background: #2563eb;
+	color: var(--color-btn-submit-text);
+	background: var(--color-btn-submit-bg);
 	border: none;
 	border-radius: 8px;
 	cursor: pointer;
 }
 
 button[type="submit"]:hover {
-	background: #1d4ed8;
+	background: var(--color-btn-submit-hover);
 }
 
 #assignmentResults {
@@ -134,7 +167,7 @@ button[type="submit"]:hover {
 #repairResults .change-log {
 	margin: 0.75rem 0 1rem;
 	padding-left: 1.15rem;
-	color: #374151;
+	color: var(--color-change-log);
 }
 
 #assignmentResults .result-actions {
@@ -144,31 +177,40 @@ button[type="submit"]:hover {
 	margin-bottom: 0.75rem;
 }
 
-#assignmentResults .copy-html-button {
+#assignmentResults .copy-html-button,
+#assignmentResults .swap-mode-toggle-button {
 	padding: 0.45rem 0.75rem;
 	font: inherit;
 	font-weight: 600;
-	color: #1d4ed8;
-	background: #eaf2ff;
-	border: 1px solid #bfdbfe;
+	color: var(--color-copy-btn-text);
+	background: var(--color-copy-btn-bg);
+	border: 1px solid var(--color-copy-btn-border);
 	border-radius: 6px;
 	cursor: pointer;
 }
 
-#assignmentResults .copy-html-button:hover {
-	background: #dbeafe;
+#assignmentResults .copy-html-button:hover,
+#assignmentResults .swap-mode-toggle-button:hover {
+	background: var(--color-copy-btn-hover);
+}
+
+#assignmentResults .swap-mode-toggle-button.active {
+	background: var(--color-swap-btn-active-bg);
+	border-color: var(--color-swap-btn-active-border);
+	color: var(--color-swap-btn-active-text);
+	transition: background 0.15s, border-color 0.15s;
 }
 
 #assignmentResults .copy-status {
 	font-size: 0.95rem;
-	color: #4b5563;
+	color: var(--color-copy-status);
 }
 
 #assignmentResults table {
 	width: 100%;
 	border-collapse: collapse;
-	background: #fff;
-	border: 1px solid #dbe2ea;
+	background: var(--color-section-bg);
+	border: 1px solid var(--color-section-border);
 	border-radius: 8px;
 	overflow: hidden;
 }
@@ -176,16 +218,16 @@ button[type="submit"]:hover {
 #assignmentResults th,
 #assignmentResults td {
 	padding: 0.65rem 0.75rem;
-	border-bottom: 1px solid #e5e7eb;
+	border-bottom: 1px solid var(--color-section-border);
 	text-align: left;
 }
 
 #assignmentResults thead {
-	background: #eef2ff;
+	background: var(--color-thead-bg);
 }
 
 #assignmentResults tbody tr:nth-child(even) {
-	background: #f8fafc;
+	background: var(--color-tbody-even-bg);
 }
 
 #assignmentResults tbody tr:last-child td {
