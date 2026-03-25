@@ -834,38 +834,43 @@ function assignRolesForFinalProjects(studentNames, roleNames, options = {}) {
 }
 
 function validateAssignments(assignments, studentNames, roleNames, options = {}) {
-	const allowDuplicateRolesInRow = options.allowDuplicateRolesInRow === true;
-	const roleCountsByStudent = new Map(
-		studentNames.map((name) => [
-			name,
-			roleNames.reduce((counts, role) => {
-				counts[role] = 0;
-				return counts;
-			}, {}),
-		])
-	);
+       const allowDuplicateRolesInRow = options.allowDuplicateRolesInRow === true;
+       const skipRoleCoverageCheck = options.skipRoleCoverageCheck === true;
+       const roleCountsByStudent = new Map(
+	       studentNames.map((name) => [
+		       name,
+		       roleNames.reduce((counts, role) => {
+			       counts[role] = 0;
+			       return counts;
+		       }, {}),
+	       ])
+       );
 
-	assignments.forEach((assignment) => {
-		const usedNames = new Set();
+       assignments.forEach((assignment) => {
+	       const usedNames = new Set();
 
-		roleNames.forEach((role) => {
-			const student = assignment[role];
-			if (!allowDuplicateRolesInRow && usedNames.has(student)) {
-				throw new Error(`A student cannot hold two roles in project ${assignment.project}.`);
-			}
+	       roleNames.forEach((role) => {
+		       const student = assignment[role];
+		       if (!allowDuplicateRolesInRow && usedNames.has(student)) {
+			       throw new Error(`A student cannot hold two roles in project ${assignment.project}.`);
+		       }
 
-			usedNames.add(student);
-			roleCountsByStudent.get(student)[role] += 1;
-		});
-	});
+		       usedNames.add(student);
+		       if (!skipRoleCoverageCheck) {
+			       roleCountsByStudent.get(student)[role] += 1;
+		       }
+	       });
+       });
 
-	roleCountsByStudent.forEach((roleCounts, student) => {
-		roleNames.forEach((role) => {
-			if (roleCounts[role] !== 1) {
-				throw new Error(`${student} was not assigned to ${role} exactly once.`);
-			}
-		});
-	});
+       if (!skipRoleCoverageCheck) {
+	       roleCountsByStudent.forEach((roleCounts, student) => {
+		       roleNames.forEach((role) => {
+			       if (roleCounts[role] !== 1) {
+				       throw new Error(`${student} was not assigned to ${role} exactly once.`);
+			       }
+		       });
+	       });
+       }
 }
 
 async function copyTextToClipboard(text) {
@@ -963,20 +968,30 @@ function formatAssignmentsTable(assignments, roleNames, options = {}) {
 		table.querySelectorAll("td.selected-for-swap").forEach(td => td.classList.remove("selected-for-swap"));
 	}
 
-	// Helper to check constraints for a swap
-	function wouldSwapViolateConstraints(assignments, rowA, rowB, role) {
-		// Clone assignments and swap
-		const testAssignments = assignments.map(a => ({...a}));
-		const temp = testAssignments[rowA][role];
-		testAssignments[rowA][role] = testAssignments[rowB][role];
-		testAssignments[rowB][role] = temp;
-		try {
-			validateAssignments(testAssignments, getStudentsFromAssignments(testAssignments, roleNames), roleNames);
-			return false;
-		} catch (e) {
-			return true;
-		}
-	}
+	       // Helper to check constraints for a swap
+		       function wouldSwapViolateConstraints(assignments, rowA, rowB, role) {
+			       // Clone only the two rows involved in the swap
+			       const testAssignments = [
+				       {...assignments[rowA]},
+				       {...assignments[rowB]}
+			       ];
+			       // Swap the role values
+			       const temp = testAssignments[0][role];
+			       testAssignments[0][role] = testAssignments[1][role];
+			       testAssignments[1][role] = temp;
+			       // Only validate the two swapped rows, skip role coverage check
+			       try {
+				       validateAssignments(
+					       testAssignments,
+					       getStudentsFromAssignments(testAssignments, roleNames),
+					       roleNames,
+					       { skipRoleCoverageCheck: true }
+				       );
+				       return false;
+			       } catch (e) {
+				       return e.message;
+			       }
+		       }
 
 	// Swap Mode Toggle Button
 	const swapBtn = document.createElement("button");
@@ -1057,8 +1072,8 @@ function formatAssignmentsTable(assignments, roleNames, options = {}) {
 							       // Check for constraint violation
 							       const violate = wouldSwapViolateConstraints(sortedAssignments, first.row, index, role);
 							       let proceed = true;
-							       if (violate) {
-								       proceed = confirm("Warning: This swap will violate assignment constraints. Proceed anyway?");
+							       if (violate !== false) {
+								       proceed = confirm("Warning: This swap will violate assignment constraint:\n\n" + violate + "\n\nProceed anyway?");
 							       }
 							       if (proceed) {
 								       // Perform swap in assignments
