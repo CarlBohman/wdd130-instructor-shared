@@ -144,9 +144,9 @@ function assignRolesRandomized(studentNames, roleNames) {
 			}
 		}
 	}
-	   if (overlapSwaps > 0 && window.DEBUG) {
-		   console.log(`[Randomized Assignment] Overlap-breaking swaps: ${overlapSwaps}`);
-	   }
+	if (overlapSwaps > 0 && window.DEBUG) {
+		console.log(`[Randomized Assignment] Overlap-breaking swaps: ${overlapSwaps}`);
+	}
 
 	validateAssignments(assignments, uniqueNames, uniqueRoles);
 	return assignments;
@@ -668,24 +668,24 @@ function initRepairForm() {
 
 	let parsedTableData = null;
 
-	       loadButton.addEventListener("click", () => {
-		       try {
-			       parsedTableData = parseAssignmentsTableHtml(tableHtmlTextarea.value);
-			       const students = getStudentsFromAssignments(parsedTableData.assignments, parsedTableData.roleNames);
-			       populateDroppedStudentSelect(droppedStudentSelect, students);
-			       output.innerHTML = `Loaded ${students.length} students and ${parsedTableData.roleNames.length} roles.`;
-			       // Show the loaded table immediately
-			       output.append(
-				       formatAssignmentsTable(parsedTableData.assignments, parsedTableData.roleNames, {
-					       preserveProjectNumbers: true,
-					       sortByRole: false
-				       })
-			       );
-		       } catch (error) {
-			       output.textContent = error.message;
-			       parsedTableData = null;
-		       }
-	       });
+	loadButton.addEventListener("click", () => {
+		try {
+			parsedTableData = parseAssignmentsTableHtml(tableHtmlTextarea.value);
+			const students = getStudentsFromAssignments(parsedTableData.assignments, parsedTableData.roleNames);
+			populateDroppedStudentSelect(droppedStudentSelect, students);
+			output.innerHTML = `Loaded ${students.length} students and ${parsedTableData.roleNames.length} roles.`;
+			// Show the loaded table immediately
+			output.append(
+				formatAssignmentsTable(parsedTableData.assignments, parsedTableData.roleNames, {
+					preserveProjectNumbers: true,
+					sortByRole: false
+				})
+			);
+		} catch (error) {
+			output.textContent = error.message;
+			parsedTableData = null;
+		}
+	});
 
 	repairForm.addEventListener("submit", (event) => {
 		event.preventDefault();
@@ -841,43 +841,43 @@ function assignRolesForFinalProjects(studentNames, roleNames, options = {}) {
 }
 
 function validateAssignments(assignments, studentNames, roleNames, options = {}) {
-       const allowDuplicateRolesInRow = options.allowDuplicateRolesInRow === true;
-       const skipRoleCoverageCheck = options.skipRoleCoverageCheck === true;
-       const roleCountsByStudent = new Map(
-	       studentNames.map((name) => [
-		       name,
-		       roleNames.reduce((counts, role) => {
-			       counts[role] = 0;
-			       return counts;
-		       }, {}),
-	       ])
-       );
+	const allowDuplicateRolesInRow = options.allowDuplicateRolesInRow === true;
+	const skipRoleCoverageCheck = options.skipRoleCoverageCheck === true;
+	const roleCountsByStudent = new Map(
+		studentNames.map((name) => [
+			name,
+			roleNames.reduce((counts, role) => {
+				counts[role] = 0;
+				return counts;
+			}, {}),
+		])
+	);
 
-       assignments.forEach((assignment) => {
-	       const usedNames = new Set();
+	assignments.forEach((assignment) => {
+		const usedNames = new Set();
 
-	       roleNames.forEach((role) => {
-		       const student = assignment[role];
-		       if (!allowDuplicateRolesInRow && usedNames.has(student)) {
-			       throw new Error(`A student cannot hold two roles in project ${assignment.project}.`);
-		       }
+		roleNames.forEach((role) => {
+			const student = assignment[role];
+			if (!allowDuplicateRolesInRow && usedNames.has(student)) {
+				throw new Error(`A student cannot hold two roles in project ${assignment.project}.`);
+			}
 
-		       usedNames.add(student);
-		       if (!skipRoleCoverageCheck) {
-			       roleCountsByStudent.get(student)[role] += 1;
-		       }
-	       });
-       });
+			usedNames.add(student);
+			if (!skipRoleCoverageCheck) {
+				roleCountsByStudent.get(student)[role] += 1;
+			}
+		});
+	});
 
-       if (!skipRoleCoverageCheck) {
-	       roleCountsByStudent.forEach((roleCounts, student) => {
-		       roleNames.forEach((role) => {
-			       if (roleCounts[role] !== 1) {
-				       throw new Error(`${student} was not assigned to ${role} exactly once.`);
-			       }
-		       });
-	       });
-       }
+	if (!skipRoleCoverageCheck) {
+		roleCountsByStudent.forEach((roleCounts, student) => {
+			roleNames.forEach((role) => {
+				if (roleCounts[role] !== 1) {
+					throw new Error(`${student} was not assigned to ${role} exactly once.`);
+				}
+			});
+		});
+	}
 }
 
 async function copyTextToClipboard(text) {
@@ -927,89 +927,89 @@ function createCopyHtmlButton(table) {
 
 
 function formatAssignmentsTable(assignments, roleNames, options = {}) {
-       const wrapper = document.createElement("div");
-       const table = document.createElement("table");
-       const thead = document.createElement("thead");
-       const tbody = document.createElement("tbody");
-       const headerRow = document.createElement("tr");
-       const columns = ["Project", ...roleNames];
-       const preserveProjectNumbers = options.preserveProjectNumbers === true;
-       const sortByRole = options.sortByRole !== false;
-       const changedCells = options.changedCells || new Set();
-       const sortRole = roleNames.includes("Client") ? "Client" : roleNames[0];
-       const sortedAssignments = sortByRole
-	       ? [...assignments].sort((a, b) =>
-		       String(a[sortRole]).localeCompare(String(b[sortRole]), undefined, {
-			       sensitivity: "base",
-		       })
-	       )
-	       : [...assignments];
+	const wrapper = document.createElement("div");
+	const table = document.createElement("table");
+	const thead = document.createElement("thead");
+	const tbody = document.createElement("tbody");
+	const headerRow = document.createElement("tr");
+	const columns = ["Project", ...roleNames];
+	const preserveProjectNumbers = options.preserveProjectNumbers === true;
+	const sortByRole = options.sortByRole !== false;
+	const changedCells = options.changedCells || new Set();
+	const sortRole = roleNames.includes("Client") ? "Client" : roleNames[0];
+	const sortedAssignments = sortByRole
+		? [...assignments].sort((a, b) =>
+			String(a[sortRole]).localeCompare(String(b[sortRole]), undefined, {
+				sensitivity: "base",
+			})
+		)
+		: [...assignments];
 
-	       columns.forEach((column) => {
-		       const th = document.createElement("th");
-		       th.textContent = column;
-		       headerRow.append(th);
-	       });
+	columns.forEach((column) => {
+		const th = document.createElement("th");
+		th.textContent = column;
+		headerRow.append(th);
+	});
 
-	       thead.append(headerRow);
+	thead.append(headerRow);
 
-		       // Helper to update table swap mode class
-		       // Move to outer scope so it can be called from button click
-		       function updateTableSwapModeClass() {
-			       if (window.swapMode) {
-				       table.classList.add("swap-mode-active");
-			       } else {
-				       table.classList.remove("swap-mode-active");
-			       }
-		       }
+	// Helper to update table swap mode class
+	// Move to outer scope so it can be called from button click
+	function updateTableSwapModeClass() {
+		if (window.swapMode) {
+			table.classList.add("swap-mode-active");
+		} else {
+			table.classList.remove("swap-mode-active");
+		}
+	}
 
-       // Manual swap state and mode
-       let swapState = { first: null };
-       if (typeof window.swapMode === "undefined") {
-	       window.swapMode = false;
-       }
-       let swapMode = window.swapMode;
+	// Manual swap state and mode
+	let swapState = { first: null };
+	if (typeof window.swapMode === "undefined") {
+		window.swapMode = false;
+	}
+	let swapMode = window.swapMode;
 
 	// Helper to clear highlights
 	function clearHighlights() {
 		table.querySelectorAll("td.selected-for-swap").forEach(td => td.classList.remove("selected-for-swap"));
 	}
 
-	       // Helper to check constraints for a swap
-		       function wouldSwapViolateConstraints(assignments, rowA, rowB, role) {
-			       // Clone only the two rows involved in the swap
-			       const testAssignments = [
-				       {...assignments[rowA]},
-				       {...assignments[rowB]}
-			       ];
-			       // Swap the role values
-			       const temp = testAssignments[0][role];
-			       testAssignments[0][role] = testAssignments[1][role];
-			       testAssignments[1][role] = temp;
-			       // Only validate the two swapped rows, skip role coverage check
-			       try {
-				       validateAssignments(
-					       testAssignments,
-					       getStudentsFromAssignments(testAssignments, roleNames),
-					       roleNames,
-					       { skipRoleCoverageCheck: true }
-				       );
-				       return false;
-			       } catch (e) {
-				       return e.message;
-			       }
-		       }
+	// Helper to check constraints for a swap
+	function wouldSwapViolateConstraints(assignments, rowA, rowB, role) {
+		// Clone only the two rows involved in the swap
+		const testAssignments = [
+			{ ...assignments[rowA] },
+			{ ...assignments[rowB] }
+		];
+		// Swap the role values
+		const temp = testAssignments[0][role];
+		testAssignments[0][role] = testAssignments[1][role];
+		testAssignments[1][role] = temp;
+		// Only validate the two swapped rows, skip role coverage check
+		try {
+			validateAssignments(
+				testAssignments,
+				getStudentsFromAssignments(testAssignments, roleNames),
+				roleNames,
+				{ skipRoleCoverageCheck: true }
+			);
+			return false;
+		} catch (e) {
+			return e.message;
+		}
+	}
 
 	// Swap Mode Toggle Button
 	const swapBtn = document.createElement("button");
 	swapBtn.type = "button";
 	swapBtn.className = "swap-mode-toggle-button";
 
-	       function updateSwapBtnText() {
-		       swapBtn.textContent = window.swapMode ? "Disable Swap Mode" : "Enable Swap Mode";
-		       swapBtn.classList.toggle("active", window.swapMode);
-	       }
-	       updateSwapBtnText();
+	function updateSwapBtnText() {
+		swapBtn.textContent = window.swapMode ? "Disable Swap Mode" : "Enable Swap Mode";
+		swapBtn.classList.toggle("active", window.swapMode);
+	}
+	updateSwapBtnText();
 
 	function showSwapInstructions() {
 		return new Promise((resolve) => {
@@ -1024,17 +1024,17 @@ function formatAssignmentsTable(assignments, roleNames, options = {}) {
 
 
 	swapBtn.addEventListener("click", async () => {
-	       if (!window.swapMode) {
-		       const ok = await showSwapInstructions();
-		       if (!ok) return;
-		       window.swapMode = true;
-	       } else {
-		       window.swapMode = false;
-		       swapState.first = null;
-		       clearHighlights();
-	       }
-	       updateSwapBtnText();
-	       updateTableSwapModeClass();
+		if (!window.swapMode) {
+			const ok = await showSwapInstructions();
+			if (!ok) return;
+			window.swapMode = true;
+		} else {
+			window.swapMode = false;
+			swapState.first = null;
+			clearHighlights();
+		}
+		updateSwapBtnText();
+		updateTableSwapModeClass();
 	});
 
 	sortedAssignments.forEach((assignment, index) => {
@@ -1043,75 +1043,75 @@ function formatAssignmentsTable(assignments, roleNames, options = {}) {
 		const values = [projectValue, ...roleNames.map((role) => assignment[role])];
 
 
-		       // Track all students in this row for duplicate highlighting
-		       const studentCounts = {};
-		       roleNames.forEach((role) => {
-			       const student = assignment[role];
-			       if (student) studentCounts[student] = (studentCounts[student] || 0) + 1;
-		       });
+		// Track all students in this row for duplicate highlighting
+		const studentCounts = {};
+		roleNames.forEach((role) => {
+			const student = assignment[role];
+			if (student) studentCounts[student] = (studentCounts[student] || 0) + 1;
+		});
 
-		       values.forEach((value, valueIndex) => {
-			       const td = document.createElement("td");
-			       if (valueIndex > 0) {
-				       const role = roleNames[valueIndex - 1];
-				       if (changedCells.has(createCellKey(assignment.project, role))) {
-					       const strong = document.createElement("strong");
-					       strong.textContent = value;
-					       td.append(strong);
-				       } else {
-					       td.textContent = value;
-				       }
-				       // Highlight if this student appears more than once in the row
-				       if (studentCounts[value] > 1) {
-					       td.classList.add("duplicate-student-cell");
-				       }
-				       // Add click handler for swapping, only if swapMode is enabled
-				       td.addEventListener("click", () => {
-					       if (!window.swapMode) return;
-					       clearHighlights();
-					       if (!swapState.first) {
-						       swapState.first = { row: index, col: valueIndex - 1, td, role };
-						       td.classList.add("selected-for-swap");
-					       } else {
-						       const first = swapState.first;
-						       // If same cell, exit swap selection (not swap mode)
-						       if (first.row === index && first.col === valueIndex - 1) {
-							       swapState.first = null;
-							       clearHighlights();
-							       return;
-						       }
-						       // Only allow swap in same column (role)
-						       if (first.col !== valueIndex - 1) {
-							       swapState.first = null;
-							       clearHighlights();
-							       alert("You can only swap within the same role column.");
-							       return;
-						       }
-						       // Check for constraint violation
-						       const violate = wouldSwapViolateConstraints(sortedAssignments, first.row, index, role);
-						       let proceed = true;
-						       if (violate !== false) {
-							       proceed = confirm("Warning: This swap will violate assignment constraint:\n\n" + violate + "\n\nProceed anyway?");
-						       }
-						       if (proceed) {
-							       // Perform swap in assignments
-							       const temp = sortedAssignments[first.row][role];
-							       sortedAssignments[first.row][role] = sortedAssignments[index][role];
-							       sortedAssignments[index][role] = temp;
-							       // Re-render table in place
-							       const newTable = formatAssignmentsTable(sortedAssignments, roleNames, options);
-							       wrapper.replaceWith(newTable);
-						       }
-						       // After swap or cancel, clear only swap selection and highlights, not swapMode
-						       swapState.first = null;
-						       clearHighlights();
-					       }
-				       });
-			       } else {
-				       td.textContent = value;
-			       }
-			       row.append(td);
-		       });
+		values.forEach((value, valueIndex) => {
+			const td = document.createElement("td");
+			if (valueIndex > 0) {
+				const role = roleNames[valueIndex - 1];
+				if (changedCells.has(createCellKey(assignment.project, role))) {
+					const strong = document.createElement("strong");
+					strong.textContent = value;
+					td.append(strong);
+				} else {
+					td.textContent = value;
+				}
+				// Highlight if this student appears more than once in the row
+				if (studentCounts[value] > 1) {
+					td.classList.add("duplicate-student-cell");
+				}
+				// Add click handler for swapping, only if swapMode is enabled
+				td.addEventListener("click", () => {
+					if (!window.swapMode) return;
+					clearHighlights();
+					if (!swapState.first) {
+						swapState.first = { row: index, col: valueIndex - 1, td, role };
+						td.classList.add("selected-for-swap");
+					} else {
+						const first = swapState.first;
+						// If same cell, exit swap selection (not swap mode)
+						if (first.row === index && first.col === valueIndex - 1) {
+							swapState.first = null;
+							clearHighlights();
+							return;
+						}
+						// Only allow swap in same column (role)
+						if (first.col !== valueIndex - 1) {
+							swapState.first = null;
+							clearHighlights();
+							alert("You can only swap within the same role column.");
+							return;
+						}
+						// Check for constraint violation
+						const violate = wouldSwapViolateConstraints(sortedAssignments, first.row, index, role);
+						let proceed = true;
+						if (violate !== false) {
+							proceed = confirm("Warning: This swap will violate assignment constraint:\n\n" + violate + "\n\nProceed anyway?");
+						}
+						if (proceed) {
+							// Perform swap in assignments
+							const temp = sortedAssignments[first.row][role];
+							sortedAssignments[first.row][role] = sortedAssignments[index][role];
+							sortedAssignments[index][role] = temp;
+							// Re-render table in place
+							const newTable = formatAssignmentsTable(sortedAssignments, roleNames, options);
+							wrapper.replaceWith(newTable);
+						}
+						// After swap or cancel, clear only swap selection and highlights, not swapMode
+						swapState.first = null;
+						clearHighlights();
+					}
+				});
+			} else {
+				td.textContent = value;
+			}
+			row.append(td);
+		});
 
 		tbody.append(row);
 	});
