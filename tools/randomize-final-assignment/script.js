@@ -1035,65 +1035,76 @@ function formatAssignmentsTable(assignments, roleNames, options = {}) {
 		const projectValue = preserveProjectNumbers ? assignment.project : index + 1;
 		const values = [projectValue, ...roleNames.map((role) => assignment[role])];
 
-		values.forEach((value, valueIndex) => {
-			const td = document.createElement("td");
-			if (valueIndex > 0) {
-				const role = roleNames[valueIndex - 1];
-				if (changedCells.has(createCellKey(assignment.project, role))) {
-					const strong = document.createElement("strong");
-					strong.textContent = value;
-					td.append(strong);
-				} else {
-					td.textContent = value;
-				}
-				// Add click handler for swapping, only if swapMode is enabled
-					       // Remove per-cell cursor assignment; handled by CSS class on table
-					       td.addEventListener("click", () => {
-						       if (!window.swapMode) return;
-						       clearHighlights();
-						       if (!swapState.first) {
-							       swapState.first = { row: index, col: valueIndex - 1, td, role };
-							       td.classList.add("selected-for-swap");
-						       } else {
-							       const first = swapState.first;
-							       // If same cell, exit swap selection (not swap mode)
-							       if (first.row === index && first.col === valueIndex - 1) {
-								       swapState.first = null;
-								       clearHighlights();
-								       return;
-							       }
-							       // Only allow swap in same column (role)
-							       if (first.col !== valueIndex - 1) {
-								       swapState.first = null;
-								       clearHighlights();
-								       alert("You can only swap within the same role column.");
-								       return;
-							       }
-							       // Check for constraint violation
-							       const violate = wouldSwapViolateConstraints(sortedAssignments, first.row, index, role);
-							       let proceed = true;
-							       if (violate !== false) {
-								       proceed = confirm("Warning: This swap will violate assignment constraint:\n\n" + violate + "\n\nProceed anyway?");
-							       }
-							       if (proceed) {
-								       // Perform swap in assignments
-								       const temp = sortedAssignments[first.row][role];
-								       sortedAssignments[first.row][role] = sortedAssignments[index][role];
-								       sortedAssignments[index][role] = temp;
-								       // Re-render table in place
-								       const newTable = formatAssignmentsTable(sortedAssignments, roleNames, options);
-								       wrapper.replaceWith(newTable);
-							       }
-							       // After swap or cancel, clear only swap selection and highlights, not swapMode
+
+		       // Track all students in this row for duplicate highlighting
+		       const studentCounts = {};
+		       roleNames.forEach((role) => {
+			       const student = assignment[role];
+			       if (student) studentCounts[student] = (studentCounts[student] || 0) + 1;
+		       });
+
+		       values.forEach((value, valueIndex) => {
+			       const td = document.createElement("td");
+			       if (valueIndex > 0) {
+				       const role = roleNames[valueIndex - 1];
+				       if (changedCells.has(createCellKey(assignment.project, role))) {
+					       const strong = document.createElement("strong");
+					       strong.textContent = value;
+					       td.append(strong);
+				       } else {
+					       td.textContent = value;
+				       }
+				       // Highlight if this student appears more than once in the row
+				       if (studentCounts[value] > 1) {
+					       td.classList.add("duplicate-student-cell");
+				       }
+				       // Add click handler for swapping, only if swapMode is enabled
+				       td.addEventListener("click", () => {
+					       if (!window.swapMode) return;
+					       clearHighlights();
+					       if (!swapState.first) {
+						       swapState.first = { row: index, col: valueIndex - 1, td, role };
+						       td.classList.add("selected-for-swap");
+					       } else {
+						       const first = swapState.first;
+						       // If same cell, exit swap selection (not swap mode)
+						       if (first.row === index && first.col === valueIndex - 1) {
 							       swapState.first = null;
 							       clearHighlights();
+							       return;
 						       }
-					       });
-			} else {
-				td.textContent = value;
-			}
-			row.append(td);
-		});
+						       // Only allow swap in same column (role)
+						       if (first.col !== valueIndex - 1) {
+							       swapState.first = null;
+							       clearHighlights();
+							       alert("You can only swap within the same role column.");
+							       return;
+						       }
+						       // Check for constraint violation
+						       const violate = wouldSwapViolateConstraints(sortedAssignments, first.row, index, role);
+						       let proceed = true;
+						       if (violate !== false) {
+							       proceed = confirm("Warning: This swap will violate assignment constraint:\n\n" + violate + "\n\nProceed anyway?");
+						       }
+						       if (proceed) {
+							       // Perform swap in assignments
+							       const temp = sortedAssignments[first.row][role];
+							       sortedAssignments[first.row][role] = sortedAssignments[index][role];
+							       sortedAssignments[index][role] = temp;
+							       // Re-render table in place
+							       const newTable = formatAssignmentsTable(sortedAssignments, roleNames, options);
+							       wrapper.replaceWith(newTable);
+						       }
+						       // After swap or cancel, clear only swap selection and highlights, not swapMode
+						       swapState.first = null;
+						       clearHighlights();
+					       }
+				       });
+			       } else {
+				       td.textContent = value;
+			       }
+			       row.append(td);
+		       });
 
 		tbody.append(row);
 	});
@@ -1110,18 +1121,6 @@ function formatAssignmentsTable(assignments, roleNames, options = {}) {
 
 	// Set swap mode class on table (initial render)
 	updateTableSwapModeClass();
-
-	       // Add style for swap highlight, swap mode button, and swap mode cursor
-	       if (!document.getElementById("swap-style")) {
-		       const style = document.createElement("style");
-		       style.id = "swap-style";
-		       style.textContent = `
-			       .selected-for-swap { outline: 2px solid #f90 !important; background: #fffbe6 !important; }
-			       .swap-mode-toggle.active { background: #f90; color: #fff; border: 1px solid #f90; }
-			       table.swap-mode-active td { cursor: pointer; }
-		       `;
-		       document.head.appendChild(style);
-	       }
 
 	return wrapper;
 }

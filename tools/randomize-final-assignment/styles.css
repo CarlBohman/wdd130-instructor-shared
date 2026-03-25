@@ -1,4 +1,31 @@
 :root {
+	--color-swap-selected-outline: #f59e42;
+	--color-swap-selected-bg: #fffbe6;
+	--color-swap-btn-active-bg: #f59e42;
+	--color-swap-btn-active-border: #f59e42;
+	--color-swap-btn-active-text: #fff;
+	--color-duplicate-cell-bg: #ffe0e0;
+}
+
+.selected-for-swap {
+	outline: 2px solid var(--color-swap-selected-outline) !important;
+	background: var(--color-swap-selected-bg) !important;
+}
+
+.swap-mode-toggle.active {
+	background: var(--color-swap-btn-active-bg);
+	color: var(--color-swap-btn-active-text);
+	border: 1px solid var(--color-swap-btn-active-border);
+}
+
+table.swap-mode-active td {
+	cursor: pointer;
+}
+
+.duplicate-student-cell {
+	background: var(--color-duplicate-cell-bg) !important;
+}
+:root {
 	font-family: Arial, Helvetica, sans-serif;
 	line-height: 1.4;
 	--color-bg-main: #f4f6f8;
