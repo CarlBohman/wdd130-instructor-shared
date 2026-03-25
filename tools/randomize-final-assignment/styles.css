@@ -183,10 +183,7 @@ button[type="submit"]:hover {
 	background: var(--color-btn-submit-hover);
 }
 
-#assignmentResults {
-	margin-top: 1.25rem;
-}
-
+#assignmentResults,
 #repairResults {
 	margin-top: 1.25rem;
 }
@@ -197,7 +194,8 @@ button[type="submit"]:hover {
 	color: var(--color-change-log);
 }
 
-#assignmentResults .result-actions {
+#assignmentResults .result-actions,
+#repairResults .result-actions {
 	display: flex;
 	align-items: center;
 	gap: 0.75rem;
@@ -205,7 +203,9 @@ button[type="submit"]:hover {
 }
 
 #assignmentResults .copy-html-button,
-#assignmentResults .swap-mode-toggle-button {
+#assignmentResults .swap-mode-toggle-button,
+#repairResults .copy-html-button,
+#repairResults .swap-mode-toggle-button {
 	padding: 0.45rem 0.75rem;
 	font: inherit;
 	font-weight: 600;
@@ -217,23 +217,28 @@ button[type="submit"]:hover {
 }
 
 #assignmentResults .copy-html-button:hover,
-#assignmentResults .swap-mode-toggle-button:hover {
+#assignmentResults .swap-mode-toggle-button:hover,
+#repairResults .copy-html-button:hover,
+#repairResults .swap-mode-toggle-button:hover {
 	background: var(--color-copy-btn-hover);
 }
 
-#assignmentResults .swap-mode-toggle-button.active {
+#assignmentResults .swap-mode-toggle-button.active,
+#repairResults .swap-mode-toggle-button.active {
 	background: var(--color-swap-btn-active-bg);
 	border-color: var(--color-swap-btn-active-border);
 	color: var(--color-swap-btn-active-text);
 	transition: background 0.15s, border-color 0.15s;
 }
 
-#assignmentResults .copy-status {
+#assignmentResults .copy-status,
+#repairResults .copy-status {
 	font-size: 0.95rem;
 	color: var(--color-copy-status);
 }
 
-#assignmentResults table {
+#assignmentResults table,
+#repairResults table {
 	width: 100%;
 	border-collapse: collapse;
 	background: var(--color-section-bg);
@@ -243,20 +248,25 @@ button[type="submit"]:hover {
 }
 
 #assignmentResults th,
-#assignmentResults td {
+#assignmentResults td,
+#repairResults th,
+#repairResults td {
 	padding: 0.65rem 0.75rem;
 	border-bottom: 1px solid var(--color-section-border);
 	text-align: left;
 }
 
-#assignmentResults thead {
+#assignmentResults thead,
+#repairResults thead {
 	background: var(--color-thead-bg);
 }
 
-#assignmentResults tbody tr:nth-child(even) {
+#assignmentResults tbody tr:nth-child(even),
+#repairResults tbody tr:nth-child(even) {
 	background: var(--color-tbody-even-bg);
 }
 
-#assignmentResults tbody tr:last-child td {
+#assignmentResults tbody tr:last-child td,
+#repairResults tbody tr:last-child td {
 	border-bottom: none;
 }

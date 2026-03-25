@@ -668,17 +668,24 @@ function initRepairForm() {
 
 	let parsedTableData = null;
 
-	loadButton.addEventListener("click", () => {
-		try {
-			parsedTableData = parseAssignmentsTableHtml(tableHtmlTextarea.value);
-			const students = getStudentsFromAssignments(parsedTableData.assignments, parsedTableData.roleNames);
-			populateDroppedStudentSelect(droppedStudentSelect, students);
-			output.textContent = `Loaded ${students.length} students and ${parsedTableData.roleNames.length} roles.`;
-		} catch (error) {
-			output.textContent = error.message;
-			parsedTableData = null;
-		}
-	});
+	       loadButton.addEventListener("click", () => {
+		       try {
+			       parsedTableData = parseAssignmentsTableHtml(tableHtmlTextarea.value);
+			       const students = getStudentsFromAssignments(parsedTableData.assignments, parsedTableData.roleNames);
+			       populateDroppedStudentSelect(droppedStudentSelect, students);
+			       output.innerHTML = `Loaded ${students.length} students and ${parsedTableData.roleNames.length} roles.`;
+			       // Show the loaded table immediately
+			       output.append(
+				       formatAssignmentsTable(parsedTableData.assignments, parsedTableData.roleNames, {
+					       preserveProjectNumbers: true,
+					       sortByRole: false
+				       })
+			       );
+		       } catch (error) {
+			       output.textContent = error.message;
+			       parsedTableData = null;
+		       }
+	       });
 
 	repairForm.addEventListener("submit", (event) => {
 		event.preventDefault();
